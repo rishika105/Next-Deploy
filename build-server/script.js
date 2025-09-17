@@ -30,11 +30,11 @@ async function init() {
   p.on("close", async function () {
     console.log("Build complete");
 
+    const distFolderPath = path.join(__dirname, "output", "build");
     if (!fs.existsSync(distFolderPath)) {
       console.error("❌ Dist folder not found. Build might have failed.");
       return;
     }
-    const distFolderPath = path.join(__dirname, "output", "dist");
     //we need contents of this folder all static html and css
     //we need to store that in s3 give file path and not folder path
     const distFolderContents = fs.readdirSync(distFolderPath, {
