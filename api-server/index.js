@@ -13,9 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 9000;
 
 //using valkey uri
-const subscriber = new Redis(
-  "rediss://default:AVNS_uydklLm7qKrDGa-gWBN@valkey-2a8a9e84-rishikaagarwal2316-4683.i.aivencloud.com:19090"
-);
+const subscriber = new Redis(process.env.VALKEY_URL);
 
 const io = new Server({ cors: "*" });
 

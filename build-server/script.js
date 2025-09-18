@@ -7,9 +7,7 @@ const Redis = require("ioredis");
 require("dotenv").config();
 
 //using valkey uri
-const publisher = new Redis(
-  "rediss://default:AVNS_uydklLm7qKrDGa-gWBN@valkey-2a8a9e84-rishikaagarwal2316-4683.i.aivencloud.com:19090"
-);
+const publisher = new Redis(process.env.VALKEY_URL);
 
 const s3Client = new S3Client({
   region: "ap-south-1",
