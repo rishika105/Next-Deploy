@@ -6,9 +6,27 @@ const {
   RunTaskCommand,
   LaunchType,
 } = require("@aws-sdk/client-ecs");
+const Redis = require("ioredis");
+const { Server } = require("socket.io");
 
 const app = express();
 const PORT = process.env.PORT || 9000;
+
+//using valkey uri
+const subscriber = new Redis(
+  "rediss://default:AVNS_uydklLm7qKrDGa-gWBN@valkey-2a8a9e84-rishikaagarwal2316-4683.i.aivencloud.com:19090"
+);
+
+const io = new Server({ cors: "*" });
+
+io.on("connection", (socket) => {
+  socket.on("subscribe", (channel) => {
+    socket.join(channel);
+    socket.emit("message", `Joined ${channel}`);
+  });
+});
+
+io.listen(9001, () => console.log("Socket Server 9001"));
 
 const ecsClient = new ECSClient({
   region: "ap-south-1",
@@ -26,10 +44,10 @@ const config = {
 app.use(express.json());
 
 app.post("/project", async (req, res) => {
-  const { gitURL } = req.body;
+  const { gitURL, slug } = req.body;
 
   //unqiue id using slug
-  const projectSlug = generateSlug();
+  const projectSlug = slug ? slug : generateSlug(); //if made changes to a repo and rebuild dont make a new deployment
 
   //spin the container
   const command = new RunTaskCommand({
@@ -73,5 +91,15 @@ app.post("/project", async (req, res) => {
     },
   });
 });
+
+async function initRedisSubscribe() {
+  console.log("Subscribed to logs.....");
+  subscriber.psubscribe("logs:*");
+  subscriber.on("pmessage", (pattern, channel, message) => {
+    io.to(channel).emit("message", message);
+  });
+}
+
+initRedisSubscribe();
 
 app.listen(PORT, () => console.log(`Server running at port ${PORT}`));
