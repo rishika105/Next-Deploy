@@ -141,3 +141,4 @@ vite.config.ts.timestamp-*
 .vite/
 
 /generated/prisma
+/config/nextdeploy-489e6-firebase-adminsdk-fbsvc-c97f7f565d.json
