@@ -1,6 +1,6 @@
 "use client";
-import Cubes from "./components/Cubes";
-import LiquidEther from "./components/LiquidEther";
+import Cubes from "./components/Cubes.jsx";
+import LiquidEther from "./components/LiquidEther.jsx";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
@@ -60,62 +60,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
       {/* Navigation */}
-      <nav className="relative z-50 bg-black/70 backdrop-blur-xl border-b border-gray-800">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-[#FF9FFC] to-[#5227FF] rounded-lg flex items-center justify-center">
-                <span className="font-bold text-white">N</span>
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                NextDeploy
-              </span>
-            </div>
-
-            <div className="hidden md:flex items-center space-x-8">
-              <Link
-                href="/features"
-                className="text-gray-300 hover:text-[#FF9FFC] transition-colors duration-300"
-              >
-                Features
-              </Link>
-              <Link
-                href="/pricing"
-                className="text-gray-300 hover:text-[#FF9FFC] transition-colors duration-300"
-              >
-                Pricing
-              </Link>
-              <Link
-                href="/docs"
-                className="text-gray-300 hover:text-[#FF9FFC] transition-colors duration-300"
-              >
-                Documentation
-              </Link>
-              <Link
-                href="/deploy"
-                className="text-gray-300 hover:text-[#FF9FFC] transition-colors duration-300"
-              >
-                Deploy
-              </Link>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/login"
-                className="text-gray-300 hover:text-[#FF9FFC] transition-colors duration-300"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/deploy"
-                className="bg-gradient-to-r from-[#5227FF] to-[#FF9FFC] hover:from-[#5227FF] hover:to-[#FF9FFC] px-6 py-2 rounded-full font-semibold transition-all transform hover:scale-105 shadow-lg shadow-[#5227FF]/20"
-              >
-                Get Started
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+ 
 
       {/* Hero Section */}
       <section className=" z-10 pt-12 pb-20">
@@ -296,7 +241,7 @@ export default function Home() {
                       width: "140%",
                       position: "absolute",
                       bottom: "200px",
-                      left: "100px"
+                      left: "100px",
                     }}
                   >
                     <Cubes
@@ -354,16 +299,13 @@ export default function Home() {
       <footer className="relative z-10 border-t border-gray-800 py-12 bg-black/70 backdrop-blur-sm">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center pl-8 pr-8">
-          
-            <div className="text-gray-400 text-sm">
-              © 2025 NextDeploy.
-            </div>
+            <div className="text-gray-400 text-sm">© 2025 NextDeploy.</div>
 
-             <div className="text-gray-400 text-sm p-3">
+            <div className="text-gray-400 text-sm p-3">
               Made with ❤️ by Rishika.
             </div>
 
-              <div className="flex items-center space-x-3 mb-4 md:mb-0">
+            <div className="flex items-center space-x-3 mb-4 md:mb-0">
               <div className="w-8 h-8 bg-gradient-to-r from-[#FF9FFC] to-[#5227FF] rounded-lg"></div>
               <span className="text-xl font-bold text-white">NextDeploy </span>
             </div>
