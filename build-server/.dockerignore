@@ -1,0 +1,9 @@
+.env
+*.env
+.aws/
+.git
+node_modules
+dist
+build
+output
+*.log

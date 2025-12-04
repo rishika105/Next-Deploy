@@ -1,16 +1,19 @@
-'use client';
-import { useState } from 'react';
-import { io } from 'socket.io-client';
-import axios from 'axios';
+"use client";
+import { useState } from "react";
+import { io } from "socket.io-client";
+import axios from "axios";
+import { useAuth } from "@clerk/nextjs";
 
 export default function Deploy() {
-  const [gitURL, setGitURL] = useState('');
-  const [slug, setSlug] = useState('');
+  const { getToken } = useAuth();
+  const [gitURL, setGitURL] = useState("");
+  const [slug, setSlug] = useState("");
   const [isDeploying, setIsDeploying] = useState(false);
   const [logs, setLogs] = useState([]);
   const [deploymentData, setDeploymentData] = useState(null);
 
   const handleDeploy = async (e) => {
+    const token = await getToken();
     e.preventDefault();
     if (!gitURL) return;
 
@@ -20,30 +23,40 @@ export default function Deploy() {
 
     try {
       // Connect to WebSocket for logs
-      const socket = io('http://localhost:9001');
-      
-      const response = await axios.post('http://localhost:9000/project', {
-        gitURL,
-        slug: slug || undefined
-      });
+      const socket = io("http://localhost:9001");
+
+      const response = await axios.post(
+        "http://localhost:9000/api/project/",
+        {
+          gitURL,
+          slug: slug || undefined,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const { projectSlug, url } = response.data.data;
       setDeploymentData({ projectSlug, url });
 
       // Subscribe to logs
-      socket.emit('subscribe', `logs:${projectSlug}`);
-      socket.on('message', (data) => {
+      socket.emit("subscribe", `logs:${projectSlug}`);
+      socket.on("message", (data) => {
         try {
           const logData = JSON.parse(data);
-          setLogs(prev => [...prev, logData.log]);
+          setLogs((prev) => [...prev, logData.log]);
         } catch (err) {
-          setLogs(prev => [...prev, data]);
+          setLogs((prev) => [...prev, data]);
         }
       });
-
     } catch (error) {
-      console.error('Deployment failed:', error);
-      setLogs(prev => [...prev, '❌ Deployment failed. Check console for details.']);
+      console.error("Deployment failed:", error);
+      setLogs((prev) => [
+        ...prev,
+        "❌ Deployment failed. Check console for details.",
+      ]);
     } finally {
       setIsDeploying(false);
     }
@@ -107,7 +120,7 @@ export default function Deploy() {
                     Deploying...
                   </div>
                 ) : (
-                  'Deploy Now 🚀'
+                  "Deploy Now 🚀"
                 )}
               </button>
             </form>
@@ -120,13 +133,15 @@ export default function Deploy() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-gray-300">Project Slug:</p>
-                  <p className="text-xl font-mono">{deploymentData.projectSlug}</p>
+                  <p className="text-xl font-mono">
+                    {deploymentData.projectSlug}
+                  </p>
                 </div>
                 <div>
                   <p className="text-gray-300">Deployment URL:</p>
-                  <a 
-                    href={deploymentData.url} 
-                    target="_blank" 
+                  <a
+                    href={deploymentData.url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-xl text-purple-400 hover:text-purple-300 underline break-all"
                   >

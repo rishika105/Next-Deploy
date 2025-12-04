@@ -6,7 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 
 const BASE_PATH =
-  "https://vercel-clone-outputs5.s3.ap-south-1.amazonaws.com/__outputs";
+  "https://next-deploy-outputs.s3.us-east-1.amazonaws.com/__outputs";
 
 const proxy = httpProxy.createProxy();
 
@@ -19,6 +19,8 @@ app.use((req, res) => {
   return proxy.web(req, res, { target: resolvesTo, changeOrigin: true });
 });
 
+//if request on / route handled differently
+//to serve index.html
 proxy.on("proxyReq", (proxyReq, req, res) => {
   const url = req.url;
   if (url === "/") {

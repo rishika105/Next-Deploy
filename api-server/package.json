@@ -12,7 +12,11 @@
   "description": "",
   "dependencies": {
     "@aws-sdk/client-ecs": "^3.891.0",
+    "@clerk/backend": "^2.25.0",
+    "@clerk/clerk-sdk-node": "^4.13.23",
     "@prisma/client": "^6.18.0",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "firebase-admin": "^13.5.0",

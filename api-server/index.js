@@ -3,23 +3,20 @@ import dotenv from "dotenv";
 import { ECSClient } from "@aws-sdk/client-ecs";
 import Redis from "ioredis";
 import { Server } from "socket.io";
-import authRoutes from "./routes/authRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
+import cors from "cors"
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use(cors()); //allow all origins
 
 const PORT = process.env.PORT || 9000;
 
 // ECS Client
 const ecsClient = new ECSClient({
-  region: "ap-south-1",
-  credentials: {
-    accessKeyId: process.env.ACCESS_KEY,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
-  },
+  region: "us-east-1"
 });
 
 // Redis
@@ -36,7 +33,6 @@ io.on("connection", (socket) => {
 io.listen(9001, () => console.log("Socket Server 9001"));
 
 // Routes
-app.use("/api/auth", authRoutes);
 app.use("/api/project", projectRoutes(ecsClient));
 
 // Redis Sub
