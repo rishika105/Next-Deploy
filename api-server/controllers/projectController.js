@@ -34,7 +34,6 @@ export const createProject = async (req, res, ecsClient) => {
         },
       },
       overrides: {
-        taskRoleArn: "arn:aws:iam::471112546627:role/vercel-clone-task-role",
         containerOverrides: [
           {
             name: "builder-image",
@@ -49,6 +48,7 @@ export const createProject = async (req, res, ecsClient) => {
 
     const response = await ecsClient.send(command);
     console.log("ECS Task started:", response.tasks?.[0]?.taskArn);
+    console.log(`Deployed link: http://${projectSlug}.localhost:8000 `)
 
     //the container deployed the static files
     //request to proxy that will route to the deployed url of s3

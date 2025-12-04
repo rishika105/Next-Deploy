@@ -39,6 +39,7 @@ export default function Deploy() {
       );
 
       const { projectSlug, url } = response.data.data;
+      console.log("Deployed URL: ")
       setDeploymentData({ projectSlug, url });
 
       // Subscribe to logs

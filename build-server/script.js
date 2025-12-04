@@ -90,6 +90,10 @@ async function init() {
 
     console.log("Done.......");
     publishLog("Done........");
+
+    console.log("Exiting...");
+    process.exit(0);
+
   });
 }
 
