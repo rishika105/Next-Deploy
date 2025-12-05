@@ -14,19 +14,15 @@ app.use((req, res) => {
   const hostName = req.hostname;
   const subdomain = hostName.split(".")[0];
 
-  const resolvesTo = `${BASE_PATH}/${subdomain}`;
+  // Handle root path
+  // route handled differently
+  //to serve index.html
+  let targetPath = req.url === "/" ? "/index.html" : req.url;
+  const resolvesTo = `${BASE_PATH}/${subdomain}${targetPath}`;
 
-  return proxy.web(req, res, { target: resolvesTo, changeOrigin: true });
+  return proxy.web(req, res, { target: resolvesTo, changeOrigin: true, ignorePath: true });
 });
 
-//if request on / route handled differently
-//to serve index.html
-proxy.on("proxyReq", (proxyReq, req, res) => {
-  const url = req.url;
-  if (url === "/") {
-    proxyReq.path += "index.html";
-  }
-  return proxyReq;
-});
+
 
 app.listen(PORT, () => console.log(`Reverse proxy running...${PORT}`));

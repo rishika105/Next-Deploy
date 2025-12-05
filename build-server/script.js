@@ -5,9 +5,7 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const mime = require("mime-types");
 const Redis = require("ioredis");
 require("dotenv").config();
-const crypto = require("crypto");
 
-const uniqueId = "proj_" + crypto.randomUUID();
 //using valkey uri
 //used to publish logs to redis
 const publisher = new Redis(process.env.VALKEY_URL);
@@ -16,10 +14,11 @@ const s3Client = new S3Client({
   region: "us-east-1"
 });
 
+//from api server the slug given by user / custom domain
 const PROJECT_ID = process.env.PROJECT_ID;
 
 function publishLog(log) {
-  publisher.publish(`logs:${uniqueId}`, JSON.stringify({ log }));
+  publisher.publish(`logs:${PROJECT_ID}`, JSON.stringify({ log }));
 }
 
 async function init() {
@@ -65,7 +64,7 @@ async function init() {
 
       const command = new PutObjectCommand({
         Bucket: "next-deploy-outputs",
-        Key: `__outputs/${PROJECT_ID}/${uniqueId}/${relativeKey}`,
+        Key: `__outputs/${PROJECT_ID}/${relativeKey}`,
         Body: fs.createReadStream(filePath),
         ContentType: mime.lookup(filePath) || "application/octet-stream",
       });

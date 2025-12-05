@@ -11,7 +11,7 @@ export const createProject = async (req, res, ecsClient) => {
   // console.log(gitURL)
 
   try {
-    //generate unique id
+    //generate if user dosent give a custom domain
     const projectSlug = slug || generateSlug();
 
     //spin up a container/run task
