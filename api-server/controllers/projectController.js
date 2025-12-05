@@ -14,6 +14,10 @@ export const createProject = async (req, res, ecsClient) => {
     //generate if user dosent give a custom domain
     const projectSlug = slug || generateSlug();
 
+    //check if slug already taken
+    
+
+
     //spin up a container/run task
     const command = new RunTaskCommand({
       cluster: config.CLUSTER,
