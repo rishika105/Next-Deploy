@@ -35,7 +35,7 @@ model Project {
 model Deployment {
   id        String           @id @default(uuid())
   project   Project          @relation(fields: [projectId], references: [id])
-  projectId String           @map("project_id")
+  projectId String           @map("SUB_DOMAIN")
   status    DeploymentStatus @default(NOT_STARTED)
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
