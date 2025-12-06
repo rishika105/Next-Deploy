@@ -3,15 +3,12 @@ const path = require("path");
 const fs = require("fs");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const mime = require("mime-types");
-const Redis = require("ioredis");
 require("dotenv").config();
 const { PrismaClient } = require("@prisma/client");
 const { Kafka } = require('kafkajs')
 
-//using valkey uri
-//used to publish logs to redis
-const prisma = new PrismaClient();
 
+const prisma = new PrismaClient();
 
 const s3Client = new S3Client({
   region: "us-east-1"
@@ -22,6 +19,8 @@ const s3Client = new S3Client({
 const SUB_DOMAIN = process.env.SUB_DOMAIN;
 const PROJECT_ID = process.env.PROJECT_ID;
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID;
+const ROOT_DIRECTORY = process.env.ROOT_DIRECTORY || "";
+const ENV_VARIABLES = JSON.parse(process.env.ENV_VARIABLES || "{}");
 
 //throw logs at kafka
 const kafka = new Kafka({
@@ -56,21 +55,56 @@ async function updateDeploymentStatus(status) {
   }
 }
 
+// ✅ AUTO-DETECT OUTPUT FOLDER
+function detectOutputFolder(projectPath) {
+  if (OUTPUT_DIRECTORY) return OUTPUT_DIRECTORY;
+
+  const possibleFolders = ["build", "dist", "out", ".next", "public"];
+
+  for (const folder of possibleFolders) {
+    const folderPath = path.join(projectPath, folder);
+    if (fs.existsSync(folderPath)) {
+      console.log(`✅ Detected output folder: ${folder}`);
+      return folder;
+    }
+  }
+
+  throw new Error("❌ No output folder found (build/dist/out)");
+}
+
 async function init() {
   //connect kafka producer
   await producer.connect();
 
   console.log("Executing script.js");
-  publishLog("Build Started....");
+  await publishLog("Build Started....");
 
   try {
+    //check what is root directory
     const outDirPath = path.join(__dirname, "output");
+    const projectPath = ROOT_DIRECTORY
+      ? path.join(outDirPath, ROOT_DIRECTORY)
+      : outDirPath;
+
+    console.log(`📁 Project path: ${projectPath}`);
+    await publishLog(`Using directory: ${ROOT_DIRECTORY || "root"}`);
+
+    // ✅ WRITE .env FILE IF ENV VARIABLES PROVIDED
+    if (Object.keys(ENV_VARIABLES).length > 0) {
+      const envContent = Object.entries(ENV_VARIABLES)
+        .map(([key, value]) => `${key}=${value}`)
+        .join("\n");
+
+      fs.writeFileSync(path.join(projectPath, ".env"), envContent);
+      console.log("✅ Environment variables written");
+      await publishLog("Environment variables configured");
+    }
 
     // ✅ UPDATE STATUS: IN_PROGRESS 
     await updateDeploymentStatus("IN_PROGRESS");
 
     //build the code and it makes a dist folder
-    const p = exec(`cd ${outDirPath} && npm install && npm run build`);
+    const p = exec(`cd ${projectPath} && npm run install && npm run build`);
 
     //gives a buffer
     p.stdout.on("data", async function (data) {
@@ -94,9 +128,14 @@ async function init() {
       }
 
       console.log("Build complete");
-      publishLog("Build complete");
+      await publishLog("Build complete");
 
-      const distFolderPath = path.join(__dirname, "output", "build");
+      // ✅ DETECT OUTPUT FOLDER
+      const outputFolder = detectOutputFolder(projectPath);
+      const distFolderPath = path.join(projectPath, outputFolder);
+
+      console.log(`📦 Output folder: ${distFolderPath}`);
+      await publishLog(`Uploading from: ${outputFolder}`);
 
       if (!fs.existsSync(distFolderPath)) {
         console.error("❌ Dist folder not found. Build might have failed.");
@@ -125,7 +164,7 @@ async function init() {
         const relativeKey = path.relative(distFolderPath, filePath);
 
         const command = new PutObjectCommand({
-          Bucket: "next-deploy-outputs",
+          Bucket: "next-deploy-outputs1",
           Key: `__outputs/${SUB_DOMAIN}/${relativeKey}`,
           Body: fs.createReadStream(filePath),
           ContentType: mime.lookup(filePath) || "application/octet-stream",

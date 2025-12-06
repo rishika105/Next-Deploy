@@ -21,6 +21,9 @@ COPY main.sh main.sh
 COPY script.js script.js
 COPY package*.json .
 COPY kafka.pem kafka.pem
+COPY prisma ./prisma
+
+RUN npx prisma generate
 
 RUN npm install
 
