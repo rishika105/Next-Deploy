@@ -1,17 +1,24 @@
 import { RunTaskCommand, LaunchType } from "@aws-sdk/client-ecs";
-import { error } from "console";
 import { generateSlug } from "random-word-slugs";
-import { z } from "zod";
 import { PrismaClient } from "@prisma/client"
 
 const config = {
   CLUSTER: "arn:aws:ecs:us-east-1:471112546627:cluster/builder-cluster",
-  TASK: "arn:aws:ecs:us-east-1:471112546627:task-definition/builder-task",
+  TASK: "arn:aws:ecs:us-east-1:471112546627:task-definition/builder-task",  //dont add last number it takes latest automatically
 };
 
 const prisma = new PrismaClient()
 
 export const createProject = async (req, res, ecsClient) => {
+  const {
+    gitURL,
+    slug,
+    projectName,
+    framework = "react", // ✅ Default
+    rootDirectory = "", // ✅ Optional subfolder
+    envVariables = {} // ✅ Optional env vars
+  } = req.body;
+
   const userId = req.auth.userId; // ✅ Clerk provides this
   console.log("userId: ", userId)
   if (!userId) {
@@ -20,16 +27,10 @@ export const createProject = async (req, res, ecsClient) => {
   //  console.log(gitURL)
 
   //validation
-  const schema = z.object({
-    projectName: z.string(),
-    gitURL: z.string(),
-  })
+  if (!gitURL || !projectName) {
+    return res.status(400).json({ error: "Missing fields" })
+  }
 
-  const safeParseResult = schema.safeParse(req.body)
-  if (safeParseResult.error) return res.staus(400).json({ error: "Fields are invalid" })
-
-  //validated data
-  const { projectName, gitURL } = safeParseResult.data
 
   try {
     //generate if user dosent give a custom domain
@@ -52,7 +53,10 @@ export const createProject = async (req, res, ecsClient) => {
         userId: userId,
         name: projectName,
         gitURL: gitURL,
-        subDomain: projectSlug
+        subDomain: projectSlug,
+        framework,
+        rootDirectory,
+        envVariables // Stored as JSON
       }
     });
 
@@ -92,6 +96,8 @@ export const createProject = async (req, res, ecsClient) => {
               { name: "SUB_DOMAIN", value: projectSlug },
               { name: "PROJECT_ID", value: project.id },
               { name: "DEPLOYMENT_ID", value: deployment.id },
+              { name: "ROOT_DIRECTORY", value: rootDirectory },
+              { name: "ENV_VARIABLES", value: JSON.stringify(envVariables) },
             ],
           },
         ],
@@ -143,6 +149,7 @@ export const checkDeploymentStatus = async (req, res) => {
   }
 
   return res.json({
+    success: true,
     id: deployment.id,
     status: deployment.status,
     projectSlug: deployment.project.subDomain,

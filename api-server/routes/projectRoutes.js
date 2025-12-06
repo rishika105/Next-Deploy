@@ -10,8 +10,7 @@ export default function projectRoutes(ecsClient) {
     createProject(req, res, ecsClient)
   });
 
-
-  router.get("/deployment/:deploymentId", ClerkExpressRequireAuth(), checkDeploymentStatus());
+  router.get("/deployment/:deploymentId", ClerkExpressRequireAuth(), checkDeploymentStatus);
 
   return router;
 }

@@ -10,6 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url = env("DATABASE_URL")
 }
 
 enum DeploymentStatus {
@@ -21,15 +22,18 @@ enum DeploymentStatus {
 }
 
 model Project {
-  id           String       @id @default(uuid())
-  userId       String
-  name         String
-  gitURL       String       @map("git_url")
-  subDomain    String       @map("sub_domain")
-  customDomain String?      @map("custom_domain") //optional
-  Deployment   Deployment[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id              String       @id @default(uuid())
+  userId          String
+  name            String
+  gitURL          String       @map("git_url")
+  subDomain       String       @map("sub_domain")
+  customDomain    String?      @map("custom_domain") //optional
+  framework       String       @default("react")
+  rootDirectory   String?      @map("root_directory")
+  envVariables    Json?        @map("env_variables") 
+  Deployment      Deployment[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }
 
 model Deployment {

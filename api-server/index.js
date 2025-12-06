@@ -1,17 +1,16 @@
 import express from "express";
 import dotenv from "dotenv";
 import { ECSClient } from "@aws-sdk/client-ecs";
-import Redis from "ioredis";
-import { Server } from "socket.io";
 import projectRoutes from "./routes/projectRoutes.js";
-
+import logRoutes from "./routes/logRoutes.js";
 import cors from "cors"
 import { Kafka } from "kafkajs"
 import { v4 } from 'uuid'
 import { uuidv4 } from "zod";
 import fs from "fs";
 import path from "path";
-import logRoutes from "./routes/logRoutes.js";
+import { createClient } from "@clickhouse/client";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
@@ -26,15 +25,16 @@ const ecsClient = new ECSClient({
   region: "us-east-1"
 });
 
-const io = new Server({ cors: "*" });
-
 //clickhouse db
-export const clickhouseClient = createClient({
-  host: process.env.CLICKHOUSE_URL,
+const clickhouseClient = createClient({
+  url: process.env.CLICKHOUSE_URL,
   database: 'default',
   username: 'avnadmin',
   password: 'AVNS_2CzvvpUp28yOvJYcIrt'
 })
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 //kafka
@@ -52,17 +52,7 @@ const kafka = new Kafka({
 })
 
 //consume logs produced in kafka topic created in script.js
-const consumer = Kafka.consumer({ groupId: 'api-server-logs-consumer' })
-
-io.on("connection", (socket) => {
-  socket.on("subscribe", (channel) => {
-    socket.join(channel);
-    socket.emit("message", `Joined ${channel}`);
-  });
-});
-
-
-io.listen(9001, () => console.log("Socket Server 9001"));
+const consumer = kafka.consumer({ groupId: 'api-server-logs-consumer' })
 
 // Routes
 app.use("/api/project", projectRoutes(ecsClient));

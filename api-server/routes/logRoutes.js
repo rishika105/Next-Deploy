@@ -1,11 +1,12 @@
 import express from "express";
 import { ClerkExpressRequireAuth } from "@clerk/clerk-sdk-node";
-import { fetchLogs } from "../controllers/logsController";
+import { fetchLogs } from "../controllers/logsController.js";
+
 
 export default function logRoutes() {
   const router = express.Router();
 
-  router.get("/:id", ClerkExpressRequireAuth(), fetchLogs());
+  router.get("/:id", ClerkExpressRequireAuth(), fetchLogs);
 
   return router;
 }
