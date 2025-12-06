@@ -20,9 +20,9 @@ export default function Header() {
               <div className="w-8 h-8 bg-gradient-to-r from-[#FF9FFC] to-[#5227FF] rounded-lg flex items-center justify-center">
                 <span className="font-bold text-white">N</span>
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              <Link href="/" className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                 NextDeploy
-              </span>
+              </Link>
             </div>
 
             {/* second */}

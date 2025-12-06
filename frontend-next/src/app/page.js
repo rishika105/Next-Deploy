@@ -60,7 +60,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
       {/* Navigation */}
- 
 
       {/* Hero Section */}
       <section className=" z-10 pt-12 pb-20">

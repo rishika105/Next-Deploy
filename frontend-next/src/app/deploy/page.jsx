@@ -1,171 +1,374 @@
 "use client";
 import { useState } from "react";
-import { io } from "socket.io-client";
 import axios from "axios";
 import { useAuth } from "@clerk/nextjs";
+import Link from "next/link";
+import { createProject } from "@/services/projectService";
+import toast from "react-hot-toast";
 
 export default function Deploy() {
   const { getToken } = useAuth();
-  const [gitURL, setGitURL] = useState("");
-  const [slug, setSlug] = useState("");
+
+  const [formData, setFormData] = useState({
+    gitURL: "",
+    slug: "",
+    projectName: "",
+    framework: "react",
+    rootDirectory: "",
+    envVariables: [{ key: "", value: "" }],
+  });
+
   const [isDeploying, setIsDeploying] = useState(false);
-  const [logs, setLogs] = useState([]);
   const [deploymentData, setDeploymentData] = useState(null);
+  const [deploymentId, setDeploymentId] = useState(null);
+  const [isEdit, isSetEdit] = useState(false);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleEnvChange = (index, field, value) => {
+    const updatedEnv = [...formData.envVariables];
+    updatedEnv[index][field] = value;
+    setFormData((prev) => ({
+      ...prev,
+      envVariables: updatedEnv,
+    }));
+  };
+
+  const addEnvVariable = () => {
+    setFormData((prev) => ({
+      ...prev,
+      envVariables: [...prev.envVariables, { key: "", value: "" }],
+    }));
+  };
+
+  const removeEnvVariable = (index) => {
+    const updatedEnv = [...formData.envVariables];
+    updatedEnv.splice(index, 1);
+    setFormData((prev) => ({
+      ...prev,
+      envVariables: updatedEnv,
+    }));
+  };
 
   const handleDeploy = async (e) => {
-    const token = await getToken();
     e.preventDefault();
-    if (!gitURL) return;
+    console.log(formData);
 
     setIsDeploying(true);
-    setLogs([]);
     setDeploymentData(null);
-
+    const token = await getToken();
     try {
-      // Connect to WebSocket for logs
-      const socket = io("http://localhost:9001");
+      // Filter out empty env variables
+      const envObject = formData.envVariables.reduce((acc, env) => {
+        if (env.key && env.value) {
+          acc[env.key] = env.value;
+        }
+        return acc;
+      }, {});
 
       const response = await axios.post(
-        "http://localhost:9000/api/project/",
+        "http://localhost:9000/api/project",
         {
-          gitURL,
-          slug: slug || undefined,
+          gitURL: formData.gitURL,
+          slug: formData.slug,
+          projectName: formData.projectName,
+          framework: formData.framework,
+          rootDirectory: formData.rootDirectory,
+          envVariables: envObject,
         },
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         }
       );
 
-      const { projectSlug, url } = response.data.data;
-      console.log("Deployed URL: ")
-      setDeploymentData({ projectSlug, url });
+      console.log(response);
 
-      // Subscribe to logs
-      socket.emit("subscribe", `logs:${projectSlug}`);
-      socket.on("message", (data) => {
-        try {
-          const logData = JSON.parse(data);
-          setLogs((prev) => [...prev, logData.log]);
-        } catch (err) {
-          setLogs((prev) => [...prev, data]);
-        }
-      });
+      if (response.data.error) {
+        toast.error(response.data.error);
+        return;
+      }
+
+      const { projectSlug, url, deploymentId } = response.data.data;
+      setDeploymentData({ projectSlug, url });
+      setDeploymentId(deploymentId);
+      return response;
     } catch (error) {
       console.error("Deployment failed:", error);
-      setLogs((prev) => [
-        ...prev,
-        "❌ Deployment failed. Check console for details.",
-      ]);
-    } finally {
-      setIsDeploying(false);
+      toast.error("Deployment failed");
     }
   };
 
+  const frameworks = [
+    { id: "react", name: "React", icon: "⚛️" },
+    { id: "next(static)", name: "Next.js", icon: "▲" },
+    { id: "vue", name: "Vue", icon: "⚡" },
+    { id: "angular", name: "Angular", icon: "🅰️" },
+    { id: "svelte", name: "Svelte", icon: "🟧" },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-6xl font-bold mb-4">
-              Deploy Your Project
-            </h1>
-            <p className="text-gray-300 text-xl">
-              Paste your GitHub repository URL and deploy instantly
-            </p>
-          </div>
+    <div className="min-h-screen bg-black text-white overflow-hidden">
+      {/* Background Gradient */}
+      <div className="" />
 
-          {/* Deployment Form */}
-          <div className="glass-effect rounded-2xl p-8 mb-8">
-            <form onSubmit={handleDeploy} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  GitHub Repository URL *
-                </label>
-                <input
-                  type="url"
-                  value={gitURL}
-                  onChange={(e) => setGitURL(e.target.value)}
-                  placeholder="https://github.com/username/repository"
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Custom Subdomain (optional)
-                </label>
-                <input
-                  type="text"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="my-awesome-project"
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
-                />
-                <p className="text-sm text-gray-400 mt-2">
-                  If not provided, a random name will be generated
-                </p>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isDeploying || !gitURL}
-                className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 px-8 py-4 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed"
-              >
-                {isDeploying ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
-                    Deploying...
-                  </div>
-                ) : (
-                  "Deploy Now 🚀"
-                )}
-              </button>
-            </form>
-          </div>
-
-          {/* Deployment Info */}
-          {deploymentData && (
-            <div className="glass-effect rounded-2xl p-8 mb-8">
-              <h3 className="text-2xl font-bold mb-4">Deployment Info</h3>
-              <div className="grid md:grid-cols-2 gap-4">
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Form */}
+          <div className="flex mx-auto justify-center items-center">
+            <div className="bg-black/50 backdrop-blur-sm border border-[#5227FF]/30 rounded-2xl p-8 w-[60%]">
+              <h1 className="text-2xl pb-4 font-semibold text-[#B19EEF]">
+                New Project
+              </h1>
+              <form onSubmit={handleDeploy} className="space-y-6 ">
+                {/* Project Name */}
                 <div>
-                  <p className="text-gray-300">Project Slug:</p>
-                  <p className="text-xl font-mono">
-                    {deploymentData.projectSlug}
+                  <label className="block text-sm font-medium mb-2 text-gray-400 leading-relaxed">
+                    Project Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="projectName"
+                    value={formData.projectName}
+                    onChange={handleInputChange}
+                    placeholder="My Awesome Project"
+                    className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#FF9FFC] focus:border-transparent outline-none transition-all"
+                    required
+                  />
+                </div>
+
+                {/* GitHub URL */}
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-400 leading-relaxed">
+                    GitHub Repository URL *
+                  </label>
+                  <input
+                    type="url"
+                    name="gitURL"
+                    value={formData.gitURL}
+                    onChange={handleInputChange}
+                    placeholder="https://github.com/username/repository"
+                    className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#FF9FFC] focus:border-transparent outline-none transition-all"
+                    required
+                  />
+                </div>
+
+                {/* Custom Slug */}
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-400 leading-relaxed">
+                    Custom Subdomain (optional)
+                  </label>
+                  <div className="flex items-center">
+                    <span className="px-3 py-3 bg-gray-900/50 border border-r-0 border-gray-700 rounded-l-lg">
+                      https://
+                    </span>
+                    <input
+                      type="text"
+                      name="slug"
+                      value={formData.slug}
+                      onChange={handleInputChange}
+                      placeholder="my-project"
+                      className="flex-1 px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-r-lg focus:ring-2 focus:ring-[#FF9FFC] focus:border-transparent outline-none transition-all"
+                    />
+                    <span className="px-3 py-3 bg-gray-900/50 border border-l-0 border-gray-700 rounded-r-lg">
+                      .nextdeploy.app
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    If left empty, a random name will be generated
                   </p>
                 </div>
+
+                {/* Framework Selection */}
+                <select
+                  className="w-full px-4 py-4 bg-gray-900/50 border border-gray-700 rounded-lg 
+             focus:ring-2 focus:ring-[#FF9FFC] focus:border-transparent outline-none transition-all"
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      framework: e.target.value,
+                    }))
+                  }
+                >
+                  {frameworks.map((framework) => (
+                    <option key={framework.id} value={framework.name}>
+                      {framework.icon} {framework.name}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Root Directory */}
                 <div>
-                  <p className="text-gray-300">Deployment URL:</p>
-                  <a
-                    href={deploymentData.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xl text-purple-400 hover:text-purple-300 underline break-all"
+                  <label className="block text-sm font-medium mb-2 text-gray-400 leading-relaxed">
+                    Root Directory (optional)
+                  </label>
+                  <input
+                    type="text"
+                    name="rootDirectory"
+                    value={isEdit ? formData.rootDirectory : "./"}
+                    onChange={handleInputChange}
+                    disabled={!isEdit}
+                    placeholder="e.g., frontend, app, src"
+                    className="w-[87%] px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg focus:ring-2 focus:ring-[#FF9FFC] focus:border-transparent outline-none transition-all"
+                  />
+                  <button
+                    type="button"
+                    className="px-4 py-3 border border-gray-600 rounded-md ml-2.5 text-[0.9rem] cursor-pointer"
+                    onClick={() => isSetEdit(true)}
                   >
-                    {deploymentData.url}
-                  </a>
+                    Edit
+                  </button>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Specify subdirectory if your project is not in repository
+                    root
+                  </p>
+                </div>
+
+                {/* Build Configuration */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-400 leading-relaxed">
+                      Build Command
+                    </label>
+                    <input
+                      type="text"
+                      value="npm run build"
+                      disabled
+                      className="w-full px-4 py-3 bg-gray-900/30 border border-gray-700 rounded-lg text-gray-600 cursor-not-allowed"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      This command will be executed during build
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-400 leading-relaxed">
+                      Install Command
+                    </label>
+                    <input
+                      type="text"
+                      value="npm install"
+                      disabled
+                      className="w-full px-4 py-3 bg-gray-900/30 border border-gray-700 rounded-lg text-gray-600 cursor-not-allowed"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      Dependencies will be installed using npm
+                    </p>
+                  </div>
+                </div>
+
+                {/* Environment Variables */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-400 leading-relaxed">
+                      Environment Variables (optional)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addEnvVariable}
+                      className="text-sm text-[#FF9FFC] hover:text-[#5227FF] transition-colors cursor-pointer"
+                    >
+                      + Add Variable
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {formData.envVariables.map((env, index) => (
+                      <div key={index} className="flex gap-3">
+                        <input
+                          type="text"
+                          placeholder="KEY"
+                          value={env.key}
+                          onChange={(e) =>
+                            handleEnvChange(index, "key", e.target.value)
+                          }
+                          className="flex-1 px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg focus:ring-1 focus:ring-[#FF9FFC] outline-none"
+                        />
+                        <input
+                          type="text"
+                          placeholder="VALUE"
+                          value={env.value}
+                          onChange={(e) =>
+                            handleEnvChange(index, "value", e.target.value)
+                          }
+                          className="flex-1 px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg focus:ring-1 focus:ring-[#FF9FFC] outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeEnvVariable(index)}
+                          className="px-3 text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Deploy Button */}
+                <button
+                  type="submit"
+                  disabled={isDeploying}
+                  className="w-full bg-gradient-to-r cursor-pointer from-[#5227FF] to-[#FF9FFC] hover:from-[#5227FF] hover:to-[#FF9FFC] text-white font-semibold py-4 px-8 rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-lg shadow-[#5227FF]/20"
+                >
+                  {isDeploying ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3" />
+                      Deploying...
+                    </div>
+                  ) : (
+                    "Deploy Now 🚀"
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Deployment Status */}
+            {deploymentData && (
+              <div className="bg-black/50 backdrop-blur-sm border border-[#5227FF]/30 rounded-2xl p-6">
+                <h3 className="text-xl font-bold mb-4 flex items-center">
+                  <span className="mr-2">🚀</span> Deployment Active
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-400">Status</p>
+                    <div className="inline-flex items-center px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm">
+                      <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                      Building
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Project URL</p>
+                    <a
+                      href={deploymentData.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#FF9FFC] hover:text-[#5227FF] break-all"
+                    >
+                      {deploymentData.url}
+                    </a>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Deployment ID</p>
+                    <p className="font-mono text-sm">{deploymentId}</p>
+                  </div>
+                  <Link
+                    href={`/logs/${deploymentId}`}
+                    className="block w-full text-center py-2 border border-[#5227FF] text-[#FF9FFC] hover:bg-[#5227FF]/10 rounded-lg transition-colors"
+                  >
+                    View Live Logs →
+                  </Link>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Build Logs */}
-          {logs.length > 0 && (
-            <div className="glass-effect rounded-2xl p-8">
-              <h3 className="text-2xl font-bold mb-4">Build Logs</h3>
-              <div className="bg-black rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm">
-                {logs.map((log, index) => (
-                  <div key={index} className="mb-1">
-                    {log}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
