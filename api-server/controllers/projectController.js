@@ -9,6 +9,7 @@ const config = {
 
 const prisma = new PrismaClient()
 
+//create project deployment
 export const createProject = async (req, res, ecsClient) => {
   const {
     gitURL,
@@ -20,7 +21,7 @@ export const createProject = async (req, res, ecsClient) => {
   } = req.body;
 
   const userId = req.auth.userId; // ✅ Clerk provides this
-  console.log("userId: ", userId)
+  //console.log("userId: ", userId)
   if (!userId) {
     return res.status(404).json({ error: "User not found" })
   }
@@ -135,27 +136,28 @@ export const createProject = async (req, res, ecsClient) => {
   }
 };
 
-
-
-export const checkDeploymentStatus = async (req, res) => {
-  const { deploymentId } = req.params;
-
-  const deployment = await prisma.deployment.findUnique({
-    where: { id: deploymentId },
-    include: { project: true }
-  });
-
-  if (!deployment) {
-    return res.status(404).json({ error: "Deployment not found" });
+//get all projects of user
+export const getProjects = async (req, res) => {
+  const id = req.auth.userId;
+  if (!userId) {
+    return res.status(404).json({ error: "User not found" })
   }
+  try {
+    const projects = await prisma.project.findMany({ where: { userId: id } })
 
-  return res.json({
-    success: true,
-    id: deployment.id,
-    status: deployment.status,
-    projectSlug: deployment.project.subDomain,
-    url: `http://${deployment.project.subDomain}.localhost:8000`,
-    createdAt: deployment.createdAt,
-    updatedAt: deployment.updatedAt
-  });
+    if (projects.entries === 0) return res.status(200).json({ message: "No projects are deployed for this user" })
+
+    return res.json.status(200).json({ projects })
+  }
+  catch (error) {
+    console.log("Get project error: ", error);
+    return res.json(500).json({ error: "Server error getting projects" })
+  }
 }
+
+
+
+//update project variables like:
+// env add or update or remove -> deployed again
+// subdomain ??
+// root directory
