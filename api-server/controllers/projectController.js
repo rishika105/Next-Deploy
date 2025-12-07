@@ -139,7 +139,7 @@ export const createProject = async (req, res, ecsClient) => {
 //get all projects of user
 export const getProjects = async (req, res) => {
   const id = req.auth.userId;
-  if (!userId) {
+  if (!id) {
     return res.status(404).json({ error: "User not found" })
   }
   try {
@@ -147,17 +147,37 @@ export const getProjects = async (req, res) => {
 
     if (projects.entries === 0) return res.status(200).json({ message: "No projects are deployed for this user" })
 
-    return res.json.status(200).json({ projects })
+    return res.status(200).json({ projects })
   }
   catch (error) {
     console.log("Get project error: ", error);
-    return res.json(500).json({ error: "Server error getting projects" })
+    return res.status(500).json({ error: "Server error getting projects" })
   }
 }
-
 
 
 //update project variables like:
 // env add or update or remove -> deployed again
 // subdomain ??
 // root directory
+
+
+//delete project
+export const deleteProject = async (req, res) => {
+  const id = req.auth.userId;
+  if (!id) {
+    return res.status(404).json({ error: "User not found" })
+  }
+  try {
+    await prisma.project.delete({ where: { userId: id } })
+
+
+    return res.status(200).json({ message: "deleted successfully" })
+  }
+  catch (error) {
+    console.log("delete project error: ", error);
+    return res.status(500).json({ error: "Server error deleting project" })
+  }
+}
+
+

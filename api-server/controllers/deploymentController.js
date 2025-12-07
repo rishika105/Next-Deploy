@@ -12,7 +12,8 @@ export const checkDeploymentStatus = async (req, res) => {
     if (!deployment) {
       return res.status(404).json({ error: "Deployment not found" });
     }
-
+    
+    //response.data
     return res.status(200).json({
       success: true,
       id: deployment.id,
@@ -26,7 +27,7 @@ export const checkDeploymentStatus = async (req, res) => {
 
   catch (error) {
     console.log("Get deployments status error: ", error);
-    return res.json(500).json({ error: "Server error getting deployment status" })
+    return res.status(500).json({ error: "Server error getting deployment status" })
   }
 
 }
@@ -36,7 +37,7 @@ export const checkDeploymentStatus = async (req, res) => {
 export const getDeployments = async (req, res) => {
   try {
     const id = req.auth.userId;
-    if (!userId) {
+    if (!id) {
       return res.status(404).json({ error: "User not found" })
     }
 
@@ -49,7 +50,7 @@ export const getDeployments = async (req, res) => {
   }
   catch (error) {
     console.log("Get deployments error: ", error);
-    return res.json(500).json({ error: "Server error getting deployments" })
+    return res.status(500).json({ error: "Server error getting deployments" })
   }
 }
 
@@ -60,8 +61,8 @@ export const getDeploymentsByProjectId = async (req, res) => {
     const id = req.auth.userId;
     const projectId = req.params.id;
 
-    if (!userId) {
-      return res.status(404).json({ error: "User not found" })
+    if (!id || !projectId) {
+      return res.status(404).json({ error: "User or project not found" })
     }
 
 
@@ -73,6 +74,6 @@ export const getDeploymentsByProjectId = async (req, res) => {
   }
   catch (error) {
     console.log("Get deployments error: ", error);
-    return res.json(500).json({ error: "Server error getting deployments of project" })
+    return res.status(500).json({ error: "Server error getting deployments of project" })
   }
 }

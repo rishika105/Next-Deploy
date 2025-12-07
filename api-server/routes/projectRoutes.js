@@ -1,6 +1,7 @@
 import express from "express";
-import { checkDeploymentStatus, createProject } from "../controllers/projectController.js";
+import { createProject, getProjects } from "../controllers/projectController.js";
 import { ClerkExpressRequireAuth } from "@clerk/clerk-sdk-node";
+import { checkDeploymentStatus } from "../controllers/deploymentController.js";
 
 export default function projectRoutes(ecsClient) {
   const router = express.Router();
@@ -11,6 +12,7 @@ export default function projectRoutes(ecsClient) {
   });
 
   router.get("/deployment/:deploymentId", ClerkExpressRequireAuth(), checkDeploymentStatus);
+  router.get("", ClerkExpressRequireAuth(), getProjects )
 
   return router;
 }

@@ -11,6 +11,7 @@ import path from "path";
 import { createClient } from "@clickhouse/client";
 import { fileURLToPath } from "url";
 import { PrismaClient } from "@prisma/client";
+import deployRoutes from "./routes/deployRoutes.js";
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ const statusConsumer = kafka.consumer({ groupId: 'api-server-status-consumer' })
 // Routes
 app.use("/api/project", projectRoutes(ecsClient));
 app.use("/api/logs", logRoutes());
+app.use("api/deployment", deployRoutes())
 
 // consume logs and store in clickhouse db
 async function initLogsConsumer() {

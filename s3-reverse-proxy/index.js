@@ -17,8 +17,12 @@ app.use((req, res) => {
   // Handle root path
   // route handled differently
   //to serve index.html
+  //on basis of subdomain the path resolved to find the s3 path
+  //https://next-deploy-outputs2.s3.us-east-1.amazonaws.com/__outputs/subdomain
   let targetPath = req.url === "/" ? "/index.html" : req.url;
   const resolvesTo = `${BASE_PATH}/${subdomain}${targetPath}`;
+
+  //check web analytics whoever request to proxy record it
 
   return proxy.web(req, res, { target: resolvesTo, changeOrigin: true, ignorePath: true });
 });
