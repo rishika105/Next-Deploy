@@ -20,13 +20,13 @@ export default function LogsPage() {
     fetchDeploymentInfo();
     startPollingLogs();
     
-    // Poll every 3 seconds for logs
+    // Poll every 2 seconds for logs
     pollingIntervalRef.current = setInterval(() => {
       if (isPolling) {
         startPollingLogs();
         fetchDeploymentInfo(); // Also poll for status updates
       }
-    }, 3000);
+    }, 2000);
     
     return () => {
       if (pollingIntervalRef.current) {
@@ -36,15 +36,15 @@ export default function LogsPage() {
   }, [id, isPolling]);
 
   // Stop polling when deployment reaches final status
-  useEffect(() => {
-    if (deploymentInfo && FINAL_STATUSES.includes(deploymentInfo.status)) {
-      console.log("Deployment completed, stopping polling");
-      setIsPolling(false);
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-    }
-  }, [deploymentInfo]);
+  // useEffect(() => {
+  //   if (deploymentInfo && FINAL_STATUSES.includes(deploymentInfo.status)) {
+  //     console.log("Deployment completed, stopping polling");
+  //     setIsPolling(false);
+  //     if (pollingIntervalRef.current) {
+  //       clearInterval(pollingIntervalRef.current);
+  //     }
+  //   }
+  // }, [deploymentInfo]);
 
   const fetchDeploymentInfo = async () => {
     try {

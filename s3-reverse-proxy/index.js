@@ -6,7 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 
 const BASE_PATH =
-  "https://next-deploy-outputs1.s3.us-east-1.amazonaws.com/__outputs";
+  "https://next-deploy-outputs2.s3.us-east-1.amazonaws.com/__outputs";
 
 const proxy = httpProxy.createProxy();
 

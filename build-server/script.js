@@ -4,11 +4,8 @@ const fs = require("fs");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const mime = require("mime-types");
 require("dotenv").config();
-const { PrismaClient } = require("@prisma/client");
 const { Kafka } = require('kafkajs')
 
-
-const prisma = new PrismaClient();
 
 const s3Client = new S3Client({
   region: "us-east-1"
@@ -40,25 +37,39 @@ const producer = kafka.producer()
 
 //publish logs using kafka
 async function publishLog(log) {
-  await producer.send({ topic: 'container-logs', messages: [{ key: 'log', value: JSON.stringify({ PROJECT_ID, DEPLOYMENT_ID, log }) }] })
+  await producer.send({
+    topic: 'container-logs',
+    messages: [{
+      key: 'log',
+      value: JSON.stringify({
+        PROJECT_ID,
+        DEPLOYMENT_ID,
+        log
+      })
+    }]
+  })
 }
 
+//send status update to kafka
 async function updateDeploymentStatus(status) {
-  try {
-    await prisma.deployment.update({
-      where: { id: DEPLOYMENT_ID },
-      data: { status: status }
-    });
-    console.log(`✅ Deployment status updated to: ${status}`);
-  } catch (err) {
-    console.error("Failed to update deployment status:", err);
-  }
+  // console.log(`📊 Updating deployment status to: ${status}`);
+  await producer.send({
+    topic: 'deployment-status', // NEW TOPIC
+    messages: [{
+      key: `status-${DEPLOYMENT_ID}`,
+      value: JSON.stringify({
+        DEPLOYMENT_ID,
+        status,
+        timestamp: new Date().toISOString()
+      })
+    }]
+  });
 }
+
 
 // ✅ AUTO-DETECT OUTPUT FOLDER
 function detectOutputFolder(projectPath) {
-  if (OUTPUT_DIRECTORY) return OUTPUT_DIRECTORY;
-
+  
   const possibleFolders = ["build", "dist", "out", ".next", "public"];
 
   for (const folder of possibleFolders) {
@@ -104,7 +115,7 @@ async function init() {
     await updateDeploymentStatus("IN_PROGRESS");
 
     //build the code and it makes a dist folder
-    const p = exec(`cd ${projectPath} && npm run install && npm run build`);
+    const p = exec(`cd ${projectPath} && npm install && npm run build`);
 
     //gives a buffer
     p.stdout.on("data", async function (data) {
@@ -164,7 +175,7 @@ async function init() {
         const relativeKey = path.relative(distFolderPath, filePath);
 
         const command = new PutObjectCommand({
-          Bucket: "next-deploy-outputs1",
+          Bucket: "next-deploy-outputs2",
           Key: `__outputs/${SUB_DOMAIN}/${relativeKey}`,
           Body: fs.createReadStream(filePath),
           ContentType: mime.lookup(filePath) || "application/octet-stream",

@@ -123,6 +123,7 @@ export const createProject = async (req, res, ecsClient) => {
     return res.json({
       status: "queued",
       data: {
+        deploymentId: deployment.id,
         projectSlug,
         ecsTaskArn: response.tasks?.[0]?.taskArn,
         url: `http://${projectSlug}.localhost:8000`,
