@@ -8,14 +8,18 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import Link from "next/link";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
-  const [selected, setSelected] = useState(false);
-  const [selected2, setSelected2] = useState(false);
-  const [selected3, setSelected3] = useState(false);
-  const [selected4, setSelected4] = useState(false);
-  
+  const pathname = usePathname();
+
+  const navItems = [
+    { name: "Overview", href: "/overview" },
+    { name: "Deployments", href: "/deployments" },
+    { name: "Observability", href: "/obs" },
+    { name: "Documentation", href: "/docs" },
+  ];
+
   return (
     <header className="sticky top-0 z-50 bg-black/70 backdrop-blur-xl border-b border-gray-800">
       <nav className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -36,51 +40,25 @@ export default function Header() {
         {/* Desktop Menu */}
         <SignedIn>
           <div className="hidden md:flex items-center space-x-8">
-            <Link
-              href="/deploy"
-              className="nav-link"
-              onClick={() => setSelected(!selected)}
-            >
-              {selected ? (
-                <div className="border-b-2 border-gray-300">Overview</div>
-              ) : (
-                <div>Overview</div>
-              )}
-            </Link>
-            <Link
-              href="/deployments"
-              className="nav-link"
-              onClick={() => setSelected2(!selected2)}
-            >
-              {selected2 ? (
-                <div className="border-b-2  border-gray-300">Deployments</div>
-              ) : (
-                <div>Deployments</div>
-              )}
-            </Link>
-            <Link
-              href="/obs"
-              className="nav-link"
-              onClick={() => setSelected4(!selected4)}
-            >
-              {selected4 ? (
-                <div className="border-b-2 border-gray-300"> Observability</div>
-              ) : (
-                <div> Observability</div>
-              )}
-            </Link>
+            {navItems.map((item) => {
+              const isActive =
+                pathname === item.href || pathname.startsWith(item.href + "/");
 
-            <Link
-              href="/docs"
-              className="nav-link"
-              onClick={() => setSelected3(!selected3)}
-            >
-              {selected3 ? (
-                <div className="border-b-2 border-gray-300"> Documentation</div>
-              ) : (
-                <div> Documentation</div>
-              )}
-            </Link>
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`relative transition text-gray-300 hover:text-white`}
+                >
+                  <span>{item.name}</span>
+
+                  {/* Active underline */}
+                  {isActive && (
+                    <span className="absolute top-11 left-0 w-full border-b-2 border-gray-300"></span>
+                  )}
+                </Link>
+              );
+            })}
 
             <UserButton />
           </div>

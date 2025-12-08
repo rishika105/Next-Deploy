@@ -138,16 +138,19 @@ export const createProject = async (req, res, ecsClient) => {
 
 //get all projects of user
 export const getProjects = async (req, res) => {
-  const id = req.auth.userId;
-  if (!id) {
-    return res.status(404).json({ error: "User not found" })
-  }
   try {
+    const id = req.auth.userId;
+    if (!id) {
+      return res.status(404).json({ error: "User not found" })
+    }
+
+    
+
     const projects = await prisma.project.findMany({ where: { userId: id } })
 
     if (projects.entries === 0) return res.status(200).json({ message: "No projects are deployed for this user" })
 
-    return res.status(200).json({ projects })
+    return res.status(200).json(projects )
   }
   catch (error) {
     console.log("Get project error: ", error);
