@@ -1,5 +1,6 @@
 "use client";
 import Cubes from "./components/Cubes.jsx";
+import Footer from "./components/Footer.jsx";
 import LiquidEther from "./components/LiquidEther.jsx";
 import Link from "next/link.js";
 import { useState, useEffect } from "react";
@@ -58,13 +59,13 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden">
+    <div className="min-h-screen text-white overflow-hidden">
       {/* Navigation */}
 
       {/* Hero Section */}
-      <section className=" z-10 pt-12 pb-20">
+      <section className=" z-10 pt-12 pb-20 ">
         {/* Liquid Ether Background - Full Screen */}
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 bg-black">
           <LiquidEther
             colors={["#5227FF", "#FF9FFC", "#B19EEF"]}
             mouseForce={40}
@@ -160,7 +161,7 @@ export default function Home() {
               applications performant.
             </p>
           </div>
-          
+
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
             {features.map((feature, index) => (
@@ -295,22 +296,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-gray-800 py-12 bg-black/70 backdrop-blur-sm">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center pl-8 pr-8">
-            <div className="text-gray-400 text-sm">© 2025 NextDeploy.</div>
-
-            <div className="text-gray-400 text-sm p-3">
-              Made with ❤️ by Rishika.
-            </div>
-
-            <div className="flex items-center space-x-3 mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-gradient-to-r from-[#FF9FFC] to-[#5227FF] rounded-lg"></div>
-              <span className="text-xl font-bold text-white">NextDeploy </span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

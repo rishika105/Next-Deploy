@@ -23,6 +23,7 @@ export const checkDeploymentStatus = async (req, res) => {
       id: deployment.id,
       status: deployment.status,
       projectSlug: deployment.project.subDomain,
+      projectName: deployment.project.name,
       url: `http://${deployment.project.subDomain}.localhost:8000`,
       createdAt: deployment.createdAt,
       updatedAt: deployment.updatedAt

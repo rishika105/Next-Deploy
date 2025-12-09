@@ -65,54 +65,45 @@ export default function Deploy() {
 
   const handleDeploy = async (e) => {
     e.preventDefault();
-    console.log(formData);
 
     setIsDeploying(true);
     setDeploymentData(null);
+
     const token = await getToken();
+
     try {
-      // Filter out empty env variables
+      // Filter environment variables
       const envObject = formData.envVariables.reduce((acc, env) => {
-        if (env.key && env.value) {
-          acc[env.key] = env.value;
-        }
+        if (env.key && env.value) acc[env.key] = env.value;
         return acc;
       }, {});
 
-      const response = await axios.post(
-        "http://localhost:9000/api/project",
-        {
-          gitURL: formData.gitURL,
-          slug: formData.slug,
-          projectName: formData.projectName,
-          framework: formData.framework,
-          rootDirectory: formData.rootDirectory,
-          envVariables: envObject,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const payload = {
+        gitURL: formData.gitURL,
+        slug: formData.slug,
+        projectName: formData.projectName,
+        framework: formData.framework,
+        rootDirectory: formData.rootDirectory,
+        envVariables: envObject,
+      };
+      // console.log(payload)
 
-      console.log(response);
+      const response = await createProject(token, payload);
 
-      if (response.data.error) {
-        toast.error(response.data.error);
+      if (response.error) {
+        toast.error(response.error);
         return;
       }
 
-      const { projectSlug, url, deploymentId } = response.data.data;
+      const { projectSlug, url, deploymentId } = response.data;
       setDeploymentData({ projectSlug, url });
       setDeploymentId(deploymentId);
-      return response;
-    } catch (error) {
-      console.error("Deployment failed:", error);
-      toast.error("Deployment failed");
+    } finally {
+      setIsDeploying(false);
     }
   };
+
+  //reset form
 
   const frameworks = [
     { id: "react", name: "React", icon: "⚛️" },
@@ -350,7 +341,7 @@ export default function Deploy() {
                 <button
                   type="submit"
                   disabled={isDeploying}
-                  className="w-full bg-gradient-to-r cursor-pointer from-[#5227FF] to-[#FF9FFC] hover:from-[#5227FF] hover:to-[#FF9FFC] text-white font-semibold py-4 px-8 rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-lg shadow-[#5227FF]/20"
+                  className="w-full bg-gradient-to-r cursor-pointer text-black from-[#5227FF] to-[#FF9FFC] hover:from-[#5227FF] hover:to-[#FF9FFC] font-semibold py-4 px-8 rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-lg shadow-[#5227FF]/20"
                 >
                   {isDeploying ? (
                     <div className="flex items-center justify-center">
@@ -366,7 +357,7 @@ export default function Deploy() {
 
             {/* Deployment Status */}
             {deploymentData && (
-              <div className="bg-black/50 backdrop-blur-sm border border-[#5227FF]/30 rounded-2xl p-6">
+              <div className="absolute top-8 left-[75%] bg-black/50 backdrop-blur-sm border border-[#5227FF]/30 rounded-2xl p-6">
                 <h3 className="text-xl font-bold mb-4 flex items-center">
                   <span className="mr-2">🚀</span> Deployment Active
                 </h3>
@@ -378,24 +369,14 @@ export default function Deploy() {
                       Building
                     </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-400">Project URL</p>
-                    <a
-                      href={deploymentData.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#FF9FFC] hover:text-[#5227FF] break-all"
-                    >
-                      {deploymentData.url}
-                    </a>
-                  </div>
+
                   <div>
                     <p className="text-sm text-gray-400">Deployment ID</p>
                     <p className="font-mono text-sm">{deploymentId}</p>
                   </div>
                   <Link
                     href={`/logs/${deploymentId}`}
-                    className="block w-full text-center py-2 border border-[#5227FF] text-[#FF9FFC] hover:bg-[#5227FF]/10 rounded-lg transition-colors"
+                    className="block w-full bg-gradient-to-r text-center text-black from-[#6755ae] to-[#FF9FFC] px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg shadow-[#5227FF]/20"
                   >
                     View Live Logs →
                   </Link>

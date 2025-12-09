@@ -22,3 +22,15 @@ export async function fetchDeploymentsByProject(projectId, token) {
   });
   return res.data;
 }
+
+export const getDeploymentInfo = async (id, token) => {
+  return axios.get(`${API_URL}/project/deployment/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
+export const getDeploymentLogs = async (id, token) => {
+  return axios.get(`${API_URL}/logs/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};

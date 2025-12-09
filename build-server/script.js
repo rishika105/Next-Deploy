@@ -69,7 +69,7 @@ async function updateDeploymentStatus(status) {
 
 // ✅ AUTO-DETECT OUTPUT FOLDER
 function detectOutputFolder(projectPath) {
-  
+
   const possibleFolders = ["build", "dist", "out", ".next", "public"];
 
   for (const folder of possibleFolders) {
@@ -175,7 +175,7 @@ async function init() {
         const relativeKey = path.relative(distFolderPath, filePath);
 
         const command = new PutObjectCommand({
-          Bucket: "next-deploy-outputs2",
+          Bucket: "next-deploy-outputs3",
           Key: `__outputs/${SUB_DOMAIN}/${relativeKey}`,
           Body: fs.createReadStream(filePath),
           ContentType: mime.lookup(filePath) || "application/octet-stream",
