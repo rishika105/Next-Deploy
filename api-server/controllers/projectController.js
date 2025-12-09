@@ -64,6 +64,7 @@ export const createProject = async (req, res, ecsClient) => {
     // ✅ CREATE DEPLOYMENT WITH STATUS: QUEUED
     const deployment = await prisma.deployment.create({
       data: {
+        userId: userId,
         projectId: project.id,
         status: "QUEUED" // Initial status
       }
@@ -144,13 +145,11 @@ export const getProjects = async (req, res) => {
       return res.status(404).json({ error: "User not found" })
     }
 
-    
-
     const projects = await prisma.project.findMany({ where: { userId: id } })
 
     if (projects.entries === 0) return res.status(200).json({ message: "No projects are deployed for this user" })
 
-    return res.status(200).json(projects )
+    return res.status(200).json(projects)
   }
   catch (error) {
     console.log("Get project error: ", error);

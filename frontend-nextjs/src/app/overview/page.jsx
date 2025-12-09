@@ -11,7 +11,6 @@ export default function Overview() {
   const { getToken } = useAuth();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [apiService, setApiService] = useState(null);
 
   const getRepoPath = (url) => {
     try {
@@ -75,7 +74,7 @@ export default function Overview() {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-xl md:text-xl font-bold mb-2">
+            <h1 className="text-xl font-bold mb-2">
               <span className="bg-gradient-to-r text-gray-100 bg-clip-text">
                 Projects
               </span>

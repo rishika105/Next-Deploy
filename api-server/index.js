@@ -38,7 +38,6 @@ const clickhouseClient = createClient({
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
 //kafka
 const kafka = new Kafka({
   clientId: `api-server`,
@@ -60,7 +59,7 @@ const statusConsumer = kafka.consumer({ groupId: 'api-server-status-consumer' })
 // Routes
 app.use("/api/project", projectRoutes(ecsClient));
 app.use("/api/logs", logRoutes());
-app.use("api/deployment", deployRoutes())
+app.use("/api/deployment", deployRoutes())
 
 // consume logs and store in clickhouse db
 async function initLogsConsumer() {

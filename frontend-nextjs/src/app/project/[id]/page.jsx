@@ -3,8 +3,6 @@
 import { useAuth } from "@clerk/nextjs";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ApiService } from "@/lib/api-service";
-import { showToast } from "@/lib/toast-service";
 import { Toaster } from "react-hot-toast";
 import Link from "next/link";
 
@@ -23,11 +21,6 @@ export default function ProjectDetails() {
     envVariables: [],
   });
 
-  useEffect(() => {
-    if (getToken) {
-      setApiService(new ApiService(getToken));
-    }
-  }, [getToken]);
 
   const fetchProjectDetails = async () => {
     try {
@@ -57,10 +50,8 @@ export default function ProjectDetails() {
   };
 
   useEffect(() => {
-    if (apiService && id) {
       fetchProjectDetails();
-    }
-  }, [apiService, id]);
+  }, []);
 
   const handleUpdate = async (e) => {
     e.preventDefault();
