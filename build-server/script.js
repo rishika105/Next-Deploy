@@ -124,9 +124,27 @@ async function init() {
     });
 
     p.stderr.on("data", async function (data) {
-      console.error("Build Error:", data.toString());
-      await publishLog(`Error: ${data.toString()}`);
+      const text = data.toString();
+
+      // Check if it's npm warning or any non-critical warning
+      const lower = text.toLowerCase();
+
+      if (
+        lower.includes("npm warn") ||
+        lower.includes("warn") ||
+        lower.includes("deprecated") ||
+        lower.includes("outdated")
+      ) {
+        // publish as warning
+        await publishLog(`WARN: ${text}`);
+        console.log("Warning:", text);
+      } else {
+        // real error
+        await publishLog(`ERROR: ${text}`);
+        console.error("Build Error:", text);
+      }
     });
+
 
     p.on("close", async function (code) {
       if (code !== 0) {

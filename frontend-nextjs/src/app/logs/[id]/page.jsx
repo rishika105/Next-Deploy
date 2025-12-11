@@ -244,18 +244,15 @@ export default function LogsPage() {
                         <div
                           key={index}
                           className={`p-2 rounded 
-    ${
-      log.log.includes("Error") || log.log.includes("❌")
-        ? "bg-red-500/10 border-l-4 border-red-500"
-        : log.log.includes("npm warn") ||
-          log.log.includes("warn") ||
-          log.log.includes("outdated") ||
-          log.log.includes("WARN")
-        ? "bg-yellow-500/10 border-l-4 border-yellow-500"
-        : log.log.includes("✅") || log.log.includes("uploaded")
-        ? "bg-green-500/10 border-l-4 border-green-500"
-        : "hover:bg-gray-800/50 border-l-4 border-gray-700"
-    }`}
+                        ${
+                          log.log.startsWith("ERROR")
+                            ? "bg-red-500/10 border-l-4 border-red-500"
+                            : log.log.startsWith("WARN")
+                            ? "bg-yellow-500/10 border-l-4 border-yellow-500"
+                            : (log.log.includes("uploaded") || log.log.includes("✅"))
+                            ? "bg-green-500/10 border-l-4 border-green-500"
+                            : "hover:bg-gray-800/50 border-l-4 border-gray-700"
+                        }`}
                         >
                           <div className="flex">
                             <span className="text-gray-500 mr-4 w-16">

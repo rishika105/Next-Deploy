@@ -138,6 +138,7 @@ export default function Overview() {
                       </div>
 
                       <Link
+                      key={project.id}
                         href={project.gitURL}
                         onClick={(e) => e.stopPropagation()}
                         target="_blank"
