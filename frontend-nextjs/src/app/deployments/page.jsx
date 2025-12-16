@@ -23,8 +23,6 @@ export default function AllDeployments() {
       setLoading(true);
       const response = await getAllDeployments(token);
       setDeployments(response.deployments);
-    } catch (error) {
-      toast.error(error.response?.data?.error || "Failed to load deployments");
     } finally {
       setLoading(false);
     }
@@ -73,7 +71,7 @@ export default function AllDeployments() {
                 <p className="text-gray-400">Loading deployments...</p>
               </div>
             </div>
-          ) : deployments.length === 0 ? (
+          ) : deployments?.length === 0 ? (
             <div className="text-center py-16 border-2 border-dashed border-gray-800 rounded-2xl">
               <h3 className="text-2xl font-bold mb-3">No deployments yet</h3>
               <p className="text-gray-400 mb-6">
@@ -111,7 +109,7 @@ export default function AllDeployments() {
                     </tr>
                   </thead>
                   <tbody>
-                    {deployments.map((deployment) => (
+                    {deployments?.map((deployment) => (
                       <tr
                         key={deployment.id}
                         onClick={() => handleCard(deployment.id)}

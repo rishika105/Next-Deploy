@@ -32,10 +32,7 @@ export default function Overview() {
       const response = await getProjects(token);
       console.log(response);
       setProjects(response.projects);
-    } catch (error) {
-      console.error("Failed to fetch projects:", error);
-      toast.error(error.response?.data?.error || "Failed to load projects");
-    } finally {
+    }  finally {
       setLoading(false);
     }
   };
@@ -95,7 +92,7 @@ export default function Overview() {
                 <p className="text-gray-400">Loading your projects...</p>
               </div>
             </div>
-          ) : projects.length === 0 ? (
+          ) : projects?.length === 0 ? (
             <div className="text-center py-16 border-2 border-dashed border-gray-800 rounded-2xl">
               <h3 className="text-2xl font-bold mb-3">No projects yet</h3>
               <p className="text-gray-400 mb-6 max-w-md mx-auto">
@@ -116,16 +113,16 @@ export default function Overview() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-xl p-6">
                   <p className="text-gray-400 text-sm mb-1">Total Projects</p>
-                  <p className="text-3xl font-bold">{projects.length}</p>
+                  <p className="text-3xl font-bold">{projects?.length}</p>
                 </div>
               </div>
 
               {/* Projects Grid */}
               <div className="min-h-screen">
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
-                  {projects.map((project) => (
+                  {projects?.map((project) => (
                     <Link
-                      key={project.id}
+                      key={project?.subDomain}
                       href={`/project/${project.id}`}
                       className="group bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 flex flex-col gap-2"
                     >
