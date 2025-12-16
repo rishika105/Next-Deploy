@@ -7,12 +7,17 @@ import Link from "next/link";
 import axios from "axios";
 import { fetchAllDeployments } from "@/services/deployService";
 import Footer from "../components/Footer";
+import { useRouter } from "next/navigation";
 
 export default function AllDeployments() {
+
+  //states
   const { getToken } = useAuth();
   const [deployments, setDeployments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
+  //api calls
   const fetchDeployments = async () => {
     const token = await getToken();
     try {
@@ -29,6 +34,10 @@ export default function AllDeployments() {
   useEffect(() => {
     fetchDeployments();
   }, []);
+
+  const handleCard = (deploymentId) => {
+    router.push(`/deployments/${deploymentId}`)
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -51,7 +60,7 @@ export default function AllDeployments() {
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-xl font-bold mb-2">
+            <h1 className="text-2xl font-bold mb-2">
               <span className="bg-gradient-to-r text-gray-100 bg-clip-text">
                 All Deployments
               </span>
@@ -103,7 +112,8 @@ export default function AllDeployments() {
                     {deployments.map((deployment) => (
                       <tr
                         key={deployment.id}
-                        className="border-b border-gray-800/50 hover:bg-gray-800/20"
+                        onClick={() => handleCard(deployment.id)}
+                        className="border-b border-gray-800/50 hover:bg-gray-800/20 cursor-pointer"
                       >
                         <td className="py-4 px-6">
                           <div>

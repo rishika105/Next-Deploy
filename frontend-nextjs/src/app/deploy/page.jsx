@@ -29,7 +29,8 @@ export default function Deploy() {
   const [deploymentData, setDeploymentData] = useState(null);
   const [deploymentId, setDeploymentId] = useState(null);
   const [isEdit, isSetEdit] = useState(false);
-
+  
+  //controlled components
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -63,6 +64,19 @@ export default function Deploy() {
     }));
   };
 
+  //reset form
+  const resetForm = () => {
+    setFormData({
+      gitURL: "",
+      slug: "",
+      projectName: "",
+      framework: "react",
+      rootDirectory: "",
+      envVariables: [{ key: "", value: "" }],
+    });
+  };
+
+  //api call
   const handleDeploy = async (e) => {
     e.preventDefault();
 
@@ -98,12 +112,11 @@ export default function Deploy() {
       const { projectSlug, url, deploymentId } = response.data;
       setDeploymentData({ projectSlug, url });
       setDeploymentId(deploymentId);
+      resetForm();
     } finally {
       setIsDeploying(false);
     }
   };
-
-  //reset form
 
   const frameworks = [
     { id: "react", name: "React", icon: "⚛️" },

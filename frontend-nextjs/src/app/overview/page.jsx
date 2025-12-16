@@ -122,14 +122,15 @@ export default function Overview() {
 
               {/* Projects Grid */}
               <div className="min-h-screen">
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 ">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                   {projects.map((project) => (
                     <Link
                       key={project.id}
                       href={`/project/${project.id}`}
-                      className="group bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl p-6"
+                      className="group bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 flex flex-col gap-2"
                     >
-                      <div className="flex items-start justify-between mb-4">
+                      {/* project name */}
+                      <div className="flex items-start justify-between">
                         <div>
                           <h3 className="text-xl font-bold mb-1 group-hover:text-[#FF9FFC] transition-colors">
                             {project.name}
@@ -137,12 +138,25 @@ export default function Overview() {
                         </div>
                       </div>
 
+                      {/* project deployed url */}
                       <Link
-                      key={project.id}
+                        href={project?.subDomain}
+                        target="_blank"
+                        onClick={(e) => e.stopPropagation()}
+                        rel="noopener noreferrer"
+                        className=" font-extralight text-sm underline text-gray-400"
+                      >
+                        http://{project?.subDomain}/localhost:8000
+                      </Link>{" "}
+                  
+
+                      {/* giturl */}
+                      <Link
+                        key={project.id}
                         href={project.gitURL}
                         onClick={(e) => e.stopPropagation()}
                         target="_blank"
-                        className="inline-flex items-center gap-2 bg-gray-800/60 border border-gray-700 px-3 py-1 rounded-full text-xs text-gray-300 hover:bg-gray-700 hover:border-[#5227FF] transition-all"
+                        className="inline-flex w-fit mt-2 items-center gap-2 bg-gray-800/60 border border-gray-700 px-3 py-1 rounded-full text-xs text-gray-300 hover:bg-gray-700 hover:border-[#5227FF] transition-all"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -159,6 +173,7 @@ export default function Overview() {
                         {getRepoPath(project.gitURL)}
                       </Link>
 
+                      {/* created at */}
                       <div className="flex items-center justify-between pt-4 border-t mt-3 border-gray-800">
                         <div>
                           <p className="text-sm text-gray-400"></p>

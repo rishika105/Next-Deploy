@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import axios from "axios";
-import { getDeploymentInfo, getDeploymentLogs } from "@/services/deployService";
+import {getDeploymentDetails, getDeploymentLogs } from "@/services/deployService";
 import Footer from "@/app/components/Footer";
 
 export default function LogsPage() {
@@ -52,7 +52,7 @@ export default function LogsPage() {
   const fetchDeploymentInfo = async () => {
     try {
       const token = await getToken();
-      const response = await getDeploymentInfo(id, token);
+      const response = await getDeploymentDetails(id, token);
       setDeploymentInfo(response.data);
     } catch (err) {
       console.error("Failed to fetch deployment info:", err);
