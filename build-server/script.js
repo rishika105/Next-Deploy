@@ -6,11 +6,9 @@ const mime = require("mime-types");
 require("dotenv").config();
 const { Kafka } = require('kafkajs')
 
-
 const s3Client = new S3Client({
   region: "us-east-1"
 });
-
 
 //from api server the unique slug given by user / custom domain
 const SUB_DOMAIN = process.env.SUB_DOMAIN;
@@ -218,7 +216,9 @@ async function init() {
       });
 
       console.log("Done.......");
-      await publishLog("Done........");
+      await publishLog("Finished........");
+      await publishLog(`Deployed at: http://${SUB_DOMAIN}/localhost:8000`)
+
 
       // ✅ UPDATE STATUS: READY (deployment successful)
       await updateDeploymentStatus("READY");

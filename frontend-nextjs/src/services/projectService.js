@@ -10,7 +10,7 @@ export const createProject = async (token, data) => {
   return res.data;
 };
 
-export const fetchProjects = async (token) => {
+export const getProjects = async (token) => {
   const res = await api.get("/project", {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -26,6 +26,14 @@ export const getProjectDeployments = async (projectId, token) => {
 
 export const getProjectDetails = async (projectId, token) => {
   const res = await api.get(`/project/${projectId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+
+export const checkGitURLExists = async ( token, gitURL) => {
+  const res = await api.get(`/project?gitURL=${gitURL}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;

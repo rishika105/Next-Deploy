@@ -3,7 +3,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { createProject } from "@/services/projectService";
+import { checkGitURLExists, createProject } from "@/services/projectService";
 import toast from "react-hot-toast";
 import {
   Listbox,
@@ -29,14 +29,39 @@ export default function Deploy() {
   const [deploymentData, setDeploymentData] = useState(null);
   const [deploymentId, setDeploymentId] = useState(null);
   const [isEdit, isSetEdit] = useState(false);
-  
+
+  const [checkingURL, setCheckingURL] = useState(false);
+  const [existingProject, setExistingProject] = useState(null);
+
+  // ✅ Check Git URL on blur
+  const handleGitURLBlur = async () => {
+    if (!formData.gitURL) return;
+
+    setCheckingURL(true);
+    setExistingProject(null);
+
+    try {
+      const token = await getToken();
+      const result = await checkGitURLExists(token, formData.gitURL);
+
+      if (result.exists) {
+        setExistingProject(result.project);
+        toast.error("This Git repository is already deployed!");
+      }
+    } finally {
+      setCheckingURL(false);
+    }
+  };
+
   //controlled components
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Clear existing project warning when user changes Git URL
+    if (name === "gitURL") {
+      setExistingProject(null);
+    }
   };
 
   const handleEnvChange = (index, field, value) => {
@@ -168,11 +193,51 @@ export default function Deploy() {
                     name="gitURL"
                     value={formData.gitURL}
                     onChange={handleInputChange}
+                    onBlur={handleGitURLBlur}
                     placeholder="https://github.com/username/repository"
                     className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg focus:ring-1 focus:ring-[#FF9FFC] focus:border-transparent outline-none transition-all"
                     required
                   />
                 </div>
+
+                {checkingURL && (
+                  <p className="text-sm text-blue-400 mt-2 flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
+                    Checking repository...
+                  </p>
+                )}
+
+                {/* ✅ Warning if repository already exists */}
+                {existingProject && (
+                  <div className="mt-3 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <span className="text-yellow-400 text-xl">⚠️</span>
+                      <div className="flex-1">
+                        <p className="text-yellow-400 font-medium mb-2">
+                          This repository is already deployed!
+                        </p>
+                        <p className="text-sm text-gray-300 mb-3">
+                          Project: <strong>{existingProject.name}</strong>
+                        </p>
+                        <div className="flex gap-2">
+                          <Link
+                            href={`/project/${existingProject.id}`}
+                            className="text-sm px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 rounded-lg transition-colors"
+                          >
+                            View Existing Project
+                          </Link>
+                          <a
+                            href={existingProject.url}
+                            target="_blank"
+                            className="text-sm px-4 py-2 bg-gray-800/50 hover:bg-gray-700 border border-gray-700 rounded-lg transition-colors"
+                          >
+                            Visit Site
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Custom Slug */}
                 <div>

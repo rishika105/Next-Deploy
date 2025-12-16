@@ -5,12 +5,11 @@ import { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import Link from "next/link";
 import axios from "axios";
-import { fetchAllDeployments } from "@/services/deployService";
+import { getAllDeployments } from "@/services/deployService";
 import Footer from "../components/Footer";
 import { useRouter } from "next/navigation";
 
 export default function AllDeployments() {
-
   //states
   const { getToken } = useAuth();
   const [deployments, setDeployments] = useState([]);
@@ -22,8 +21,8 @@ export default function AllDeployments() {
     const token = await getToken();
     try {
       setLoading(true);
-      const data = await fetchAllDeployments(token);
-      setDeployments(data);
+      const response = await getAllDeployments(token);
+      setDeployments(response.deployments);
     } catch (error) {
       toast.error(error.response?.data?.error || "Failed to load deployments");
     } finally {
@@ -36,8 +35,8 @@ export default function AllDeployments() {
   }, []);
 
   const handleCard = (deploymentId) => {
-    router.push(`/deployments/${deploymentId}`)
-  }
+    router.push(`/deployments/${deploymentId}`);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -104,6 +103,9 @@ export default function AllDeployments() {
                         Deployed
                       </th>
                       <th className="text-left py-4 px-6 text-gray-400 font-medium">
+                        Framework
+                      </th>
+                      <th className="text-left py-4 px-6 text-gray-400 font-medium">
                         Actions
                       </th>
                     </tr>
@@ -163,12 +165,13 @@ export default function AllDeployments() {
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex items-center space-x-2">
-                            <Link
-                              href={`/logs/${deployment.id}`}
-                              className="px-3 py-1 bg-[#5227FF]/20 hover:bg-[#5227FF]/30 text-[#FF9FFC] rounded-lg text-sm transition-colors"
-                            >
-                              Logs
-                            </Link>
+                            <p className="px-3 py-1  text-gray-300 rounded-lg text-md transition-colors">
+                              {deployment.project.framework}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center space-x-2">
                             <Link
                               href={`/project/${deployment.projectId}`}
                               className="px-3 py-1 bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 rounded-lg text-sm transition-colors"

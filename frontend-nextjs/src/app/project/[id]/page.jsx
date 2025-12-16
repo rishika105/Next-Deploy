@@ -18,6 +18,7 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [deploymentsLoading, setDeploymentsLoading] = useState(true);
 
+  //api calls
   useEffect(() => {
     fetchProjectDetails();
     fetchProjectDeployments();
@@ -27,7 +28,7 @@ export default function ProjectDetailPage() {
     try {
       const token = await getToken();
       const response = await getProjectDetails(id, token);
-      setProject(response);
+      setProject(response.project);
     } finally {
       setLoading(false);
     }
@@ -37,7 +38,7 @@ export default function ProjectDetailPage() {
     try {
       const token = await getToken();
       const response = await getProjectDeployments(id, token);
-      setDeployments(response);
+      setDeployments(response.deployments);
     } finally {
       setDeploymentsLoading(false);
     }

@@ -4,10 +4,15 @@ import { checkDeploymentStatus, getDeployments, getDeploymentsByProjectId, } fro
 
 export default function deployRoutes() {
     const router = express.Router();
-
+     
+    //deployment details
     router.get("/:deploymentId", ClerkExpressRequireAuth(), checkDeploymentStatus);
+
+    //get all
     router.get("", ClerkExpressRequireAuth(), getDeployments);
-    router.get("/:projectId", ClerkExpressRequireAuth(), getDeploymentsByProjectId)
+
+    //get deployments by project id
+    router.get("/project/:projectId", ClerkExpressRequireAuth(), getDeploymentsByProjectId)
 
 
     return router;

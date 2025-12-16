@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import toast, { Toaster } from "react-hot-toast";
 import Footer from "../components/Footer";
-import { fetchProjects } from "@/services/projectService";
+import { getProjects } from "@/services/projectService";
 
 export default function Overview() {
   const { getToken } = useAuth();
@@ -29,9 +29,9 @@ export default function Overview() {
 
     try {
       setLoading(true);
-      const response = await fetchProjects(token);
+      const response = await getProjects(token);
       console.log(response);
-      setProjects(response);
+      setProjects(response.projects);
     } catch (error) {
       console.error("Failed to fetch projects:", error);
       toast.error(error.response?.data?.error || "Failed to load projects");
@@ -137,9 +137,9 @@ export default function Overview() {
                           </h3>
                         </div>
                       </div>
-
                       {/* project deployed url */}
                       <Link
+                        key={project.id} //hydration error fix??? (<a descendent of <a not possible)
                         href={project?.subDomain}
                         target="_blank"
                         onClick={(e) => e.stopPropagation()}
@@ -148,8 +148,6 @@ export default function Overview() {
                       >
                         http://{project?.subDomain}/localhost:8000
                       </Link>{" "}
-                  
-
                       {/* giturl */}
                       <Link
                         key={project.id}
@@ -172,7 +170,6 @@ export default function Overview() {
 
                         {getRepoPath(project.gitURL)}
                       </Link>
-
                       {/* created at */}
                       <div className="flex items-center justify-between pt-4 border-t mt-3 border-gray-800">
                         <div>

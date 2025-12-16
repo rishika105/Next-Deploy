@@ -6,7 +6,7 @@ import { fetchLogs } from "../controllers/logsController.js";
 export default function logRoutes() {
   const router = express.Router();
 
-  router.get("/:id", ClerkExpressRequireAuth(), fetchLogs);
+  router.get("/:deploymentId", ClerkExpressRequireAuth(), fetchLogs);
 
   return router;
 }

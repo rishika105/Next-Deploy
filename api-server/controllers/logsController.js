@@ -1,11 +1,11 @@
 import { createClient } from "@clickhouse/client";
 
 //clickhouse db
- const clickhouseClient = createClient({
-  url: process.env.CLICKHOUSE_URL,
-  database: 'default',
-  username: 'avnadmin',
-  password: 'AVNS_2CzvvpUp28yOvJYcIrt'
+const clickhouseClient = createClient({
+    url: process.env.CLICKHOUSE_URL,
+    database: 'default',
+    username: 'avnadmin',
+    password: 'AVNS_2CzvvpUp28yOvJYcIrt'
 })
 
 export const fetchLogs = async (req, res) => {
@@ -24,10 +24,16 @@ export const fetchLogs = async (req, res) => {
         //convert back to normal
         const rawLogs = await logs.json();
 
-        return res.json({ rawLogs })
+        return res.json({
+            success: true,
+            rawLogs
+        })
     }
     catch (err) {
         console.log(err);
-        return res.status(500).json({ error: "Internal server error fetching logs" })
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error fetching logs"
+        })
     }
 }
