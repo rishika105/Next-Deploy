@@ -32,9 +32,22 @@ export const getProjectDetails = async (projectId, token) => {
 };
 
 
-export const checkGitURLExists = async ( token, gitURL) => {
+export const checkGitURLExists = async (token, gitURL) => {
   const res = await api.get(`/project?gitURL=${gitURL}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
+};
+
+export const redeployProject = async (token, projectId) => {
+  const response = await api.post(
+    `${API_URL}/project/${projectId}/redeploy`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return response.data;
 };

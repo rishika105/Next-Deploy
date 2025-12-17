@@ -296,46 +296,102 @@ export const checkGitURL = async (req, res) => {
   }
 };
 
-// Update project (env variables, subdomain, root directory)
-export const updateProject = async (req, res) => {
+//redeploy
+export const redeployProject = async (req, res, ecsClient) => {
+  const userId = req.auth.userId;
+  const { projectId } = req.params;
+  //if update env and deploy is triggered
+  const { envVariables } = req.body;
+
+
+  if (!userId) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
   try {
-    const userId = req.auth.userId;
-    const { projectId } = req.params;
-    const { envVariables, rootDirectory } = req.body;
-
-    if (!userId) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    // Verify ownership
+    // Get current project details
     const project = await prisma.project.findFirst({
-      where: { id: projectId, userId: userId }
+      where: { id: projectId, userId }
     });
 
     if (!project) {
-      return res.status(404).json({ success: false, message: "Project not found" });
+      return res.status(404).json({ error: "Project not found" });
     }
 
-    const updatedProject = await prisma.project.update({
-      where: { id: projectId },
+    // Update project with new env variables
+    const updatedProject = project;
+    if (envVariables) {
+      updatedProject = await prisma.project.update({
+        where: { id: projectId },
+        data: { envVariables }
+      });
+    }
+
+    // Create new deployment
+    const deployment = await prisma.deployment.create({
       data: {
-        ...(envVariables !== undefined && { envVariables }),
-        ...(rootDirectory !== undefined && { rootDirectory })
+        userId: userId,
+        projectId: project.id,
+        status: "QUEUED"
       }
     });
 
-    return res.status(200).json({
-      success: true,
-      updatedProject
+    // Spin up ECS task with current project settings
+    const command = new RunTaskCommand({
+      cluster: config.CLUSTER,
+      taskDefinition: config.TASK,
+      launchType: LaunchType.FARGATE,
+      count: 1,
+      taskRoleArn: "arn:aws:iam::471112546627:role/vercel-clone-task-role",
+      networkConfiguration: {
+        awsvpcConfiguration: {
+          assignPublicIp: "ENABLED",
+          subnets: [
+            "subnet-048917ed4b29cacf3",
+            "subnet-0e3876698af79dea0",
+            "subnet-0c9f495b29954cd5c",
+          ],
+          securityGroups: ["sg-02f3bcf249107bc7b"],
+        },
+      },
+      overrides: {
+        containerOverrides: [
+          {
+            name: "builder-image",
+            environment: [
+              { name: "GIT_REPOSITORY_URL", value: project.gitURL },
+              { name: "SUB_DOMAIN", value: project.subDomain },
+              { name: "PROJECT_ID", value: project.id },
+              { name: "DEPLOYMENT_ID", value: deployment.id },
+              { name: "ROOT_DIRECTORY", value: project.rootDirectory || "" },
+              { name: "ENV_VARIABLES", value: JSON.stringify(updatedProject.envVariables) },
+            ],
+          },
+        ],
+      },
     });
+
+    await ecsClient.send(command);
+
+    // Update deployment status
+    await prisma.deployment.update({
+      where: { id: deployment.id },
+      data: { status: "IN_PROGRESS" }
+    });
+
+    return res.json({
+      deploymentId: deployment.id,
+      status: "IN_PROGRESS",
+      url: `http://${project.subDomain}.localhost:8000`,
+      message: "Redeployment started successfully"
+    });
+
   } catch (error) {
-    console.log("Update project error: ", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error updating project"
-    });
+    console.log("Redeploy error: ", error);
+    return res.status(500).json({ error: "Server error redeploying project" });
   }
 };
+
 
 // Delete project
 export const deleteProject = async (req, res) => {

@@ -1,5 +1,5 @@
 import express from "express";
-import { checkGitURL, createProject, deleteProject, getProjectById, getProjects, updateProject } from "../controllers/projectController.js";
+import { checkGitURL, createProject, deleteProject, getProjectById, getProjects, redeployProject } from "../controllers/projectController.js";
 import { ClerkExpressRequireAuth } from "@clerk/clerk-sdk-node";
 
 export default function projectRoutes(ecsClient) {
@@ -20,8 +20,10 @@ export default function projectRoutes(ecsClient) {
   //get project details by id
   router.get("/:projectId", ClerkExpressRequireAuth(), getProjectById)
 
-  // Update project
-  router.put("/:projectId", ClerkExpressRequireAuth(), updateProject);
+  //redploy
+  router.post("/project/:projectId/redeploy", ClerkExpressRequireAuth(), (req, res) => {
+    redeployProject(req, res, req.app.get("ecsClient"));
+  });
 
   // Delete project
   router.delete("/:projectId", ClerkExpressRequireAuth(), deleteProject);

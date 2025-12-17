@@ -14,8 +14,9 @@ export async function getDeploymentDetails(deploymentId, token) {
   return res.data;
 }
 
-export const getDeploymentLogs = (deploymentId, token) => {
-  return api.get(`/logs/${deploymentId}`, {
+export const getDeploymentLogs = async (deploymentId, token) => {
+  const res = await api.get(`/logs/${deploymentId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  return res.data;
 };

@@ -5,7 +5,10 @@ import { useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Footer from "@/app/components/Footer";
-import { getDeploymentDetails, getDeploymentLogs } from "@/services/deployService";
+import {
+  getDeploymentDetails,
+  getDeploymentLogs,
+} from "@/services/deployService";
 
 export default function DeploymentDetailPage() {
   const { id } = useParams();
@@ -52,44 +55,29 @@ export default function DeploymentDetailPage() {
   const fetchDeploymentDetails = async () => {
     try {
       const token = await getToken();
-      const response = await getDeploymentDetails(id, token)
+      const response = await getDeploymentDetails(id, token);
       setDeployment(response);
-    }  finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchLogs = async () => {
-    try {
-      const token = await getToken();
-      const response = await getDeploymentLogs(id, token);
-
-      if (response.data.rawLogs) {
-        const sorted = response.data.rawLogs.sort(
-          (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
-        );
-        setLogs(sorted);
-      }
     } finally {
       setLoading(false);
     }
   };
+const fetchLogs = async () => {
+  try {
+    const token = await getToken();
+    const response = await getDeploymentLogs(id, token);
+    console.log("LOG RESPONSE:", response);
+  
+    const logsArray = response.rawLogs.data ?? [];
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "READY":
-        return "bg-green-500/20 text-green-400";
-      case "IN_PROGRESS":
-        return "bg-blue-500/20 text-blue-400";
-      case "FAIL":
-        return "bg-red-500/20 text-red-400";
-      case "QUEUED":
-        return "bg-yellow-500/20 text-yellow-400";
-      default:
-        return "bg-gray-500/20 text-gray-400";
-    }
-  };
+    const sorted = [...logsArray].sort(
+      (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+    );
 
+    setLogs(sorted);
+  } finally {
+    setLogsLoading(false);
+  }
+};
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString("en-US", {
       month: "short",

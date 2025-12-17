@@ -7,11 +7,13 @@ import { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import Footer from "../components/Footer";
 import { getProjects } from "@/services/projectService";
+import { useRouter } from "next/navigation";
 
 export default function Overview() {
   const { getToken } = useAuth();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const getRepoPath = (url) => {
     try {
@@ -32,7 +34,7 @@ export default function Overview() {
       const response = await getProjects(token);
       console.log(response);
       setProjects(response.projects);
-    }  finally {
+    } finally {
       setLoading(false);
     }
   };
@@ -121,9 +123,9 @@ export default function Overview() {
               <div className="min-h-screen">
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
                   {projects?.map((project) => (
-                    <Link
+                    <div
                       key={project?.subDomain}
-                      href={`/project/${project.id}`}
+                      onClick={() => router.push(`/project/${project.id}`)}
                       className="group bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 flex flex-col gap-2"
                     >
                       {/* project name */}
@@ -136,7 +138,7 @@ export default function Overview() {
                       </div>
                       {/* project deployed url */}
                       <Link
-                        key={project.id} //hydration error fix??? (<a descendent of <a not possible)
+                        key={project.id} 
                         href={project?.subDomain}
                         target="_blank"
                         onClick={(e) => e.stopPropagation()}
@@ -147,7 +149,7 @@ export default function Overview() {
                       </Link>{" "}
                       {/* giturl */}
                       <Link
-                        key={project.id}
+                        key={project.subDomain}
                         href={project.gitURL}
                         onClick={(e) => e.stopPropagation()}
                         target="_blank"
@@ -179,7 +181,7 @@ export default function Overview() {
                           →
                         </span>
                       </div>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               </div>
