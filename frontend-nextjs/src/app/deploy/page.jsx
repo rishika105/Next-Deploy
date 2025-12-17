@@ -12,6 +12,7 @@ import {
   ListboxOptions,
 } from "@headlessui/react";
 import { ChevronDown } from "lucide-react"; // or any icon you like
+import { useRouter } from "next/navigation";
 
 export default function Deploy() {
   const { getToken } = useAuth();
@@ -29,9 +30,10 @@ export default function Deploy() {
   const [deploymentData, setDeploymentData] = useState(null);
   const [deploymentId, setDeploymentId] = useState(null);
   const [isEdit, isSetEdit] = useState(false);
-
+  const router = useRouter();
   const [checkingURL, setCheckingURL] = useState(false);
   const [existingProject, setExistingProject] = useState(null);
+  const [isDuplicate, setIsDuplicate] = useState(false);
 
   // ✅ Check Git URL on blur
   const handleGitURLBlur = async () => {
@@ -46,7 +48,10 @@ export default function Deploy() {
 
       if (result.exists) {
         setExistingProject(result.project);
+        setIsDuplicate(true);
         toast.error("This Git repository is already deployed!");
+      } else {
+        setIsDuplicate(false);
       }
     } finally {
       setCheckingURL(false);
@@ -61,6 +66,7 @@ export default function Deploy() {
     // Clear existing project warning when user changes Git URL
     if (name === "gitURL") {
       setExistingProject(null);
+      setIsDuplicate(false);
     }
   };
 
@@ -108,6 +114,11 @@ export default function Deploy() {
     setIsDeploying(true);
     setDeploymentData(null);
 
+    if (isDuplicate) {
+      setIsDeploying(false);
+      return;
+    }
+
     const token = await getToken();
 
     try {
@@ -129,15 +140,11 @@ export default function Deploy() {
 
       const response = await createProject(token, payload);
 
-      if (response.error) {
-        toast.error(response.error);
-        return;
-      }
-
       const { projectSlug, url, deploymentId } = response.data;
       setDeploymentData({ projectSlug, url });
       setDeploymentId(deploymentId);
       resetForm();
+      router.push(`/deployments/${deploymentId}`);
     } finally {
       setIsDeploying(false);
     }
@@ -432,35 +439,6 @@ export default function Deploy() {
                 </button>
               </form>
             </div>
-
-            {/* Deployment Status */}
-            {deploymentData && (
-              <div className="absolute top-8 left-[75%] bg-black/50 backdrop-blur-sm border border-[#5227FF]/30 rounded-2xl p-6">
-                <h3 className="text-xl font-bold mb-4 flex items-center">
-                  <span className="mr-2">🚀</span> Deployment Active
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-400">Status</p>
-                    <div className="inline-flex items-center px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm">
-                      <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                      Building
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-gray-400">Deployment ID</p>
-                    <p className="font-mono text-sm">{deploymentId}</p>
-                  </div>
-                  <Link
-                    href={`/logs/${deploymentId}`}
-                    className="block w-full bg-gradient-to-r text-center text-black from-[#6755ae] to-[#FF9FFC] px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg shadow-[#5227FF]/20"
-                  >
-                    View Live Logs →
-                  </Link>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
