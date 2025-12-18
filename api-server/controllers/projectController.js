@@ -1,6 +1,9 @@
 import { RunTaskCommand, LaunchType } from "@aws-sdk/client-ecs";
 import { generateSlug } from "random-word-slugs";
 import { PrismaClient } from "@prisma/client";
+import { Octokit } from "@octokit/rest";
+import axios from "axios"
+
 
 const config = {
   CLUSTER: "arn:aws:ecs:us-east-1:471112546627:cluster/builder-cluster",
@@ -22,43 +25,81 @@ export const createProject = async (req, res, ecsClient) => {
 
   const userId = req.auth.userId;
 
-  if (!userId) {
-    return res.status(404).json({
-      success: false,
-      message: "User not found"
-    });
-  }
-
-  // Validation
-  if (!gitURL || !projectName) {
+  if (!userId || !projectName) {
     return res.status(400).json({
       success: false,
-      message: "Missing required fields: gitURL and projectName"
+      message: "User or project name not found"
     });
   }
 
-  try {
-    // ✅ CHECK FOR DUPLICATE GIT URL FOR THIS USER
-    const existingProjectWithGitURL = await prisma.project.findFirst({
-      where: {
-        userId: userId,
-        gitURL: gitURL
-      }
-    });
+  // ✅ GET USER'S GITHUB TOKEN
+  const user = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    select: { githubAccessToken: true, githubUsername: true }
+  });
 
-    if (existingProjectWithGitURL) {
-      return res.status(409).json({
+  if (!user?.githubAccessToken) {
+    return res.status(403).json({
+      success: false,
+      message: "Please connect your GitHub account first",
+      needsGitHubAuth: true
+    });
+  }
+
+  // ✅ VERIFY REPO ACCESS
+  const octokit = new Octokit({
+    auth: user.githubAccessToken
+  });
+
+  // Parse owner/repo from URL
+  const repoMatch = gitURL.match(/github\.com\/([^\/]+)\/([^\/\.]+)/);
+  if (!repoMatch) {
+    return res.status(400).json({ success: false, message: "Invalid GitHub URL" });
+  }
+
+  const [, owner, repoName] = repoMatch;
+
+  try {
+    // Check if user has access to repo
+    await octokit.repos.get({
+      owner,
+      repo: repoName
+    });
+    // ✅ User has access!
+  } catch (error) {
+    if (error.status === 404) {
+      return res.status(403).json({
         success: false,
-        message: "Project with this Git URL already exists",
-        existingProject: {
-          id: existingProjectWithGitURL.id,
-          name: existingProjectWithGitURL.name,
-          subDomain: existingProjectWithGitURL.subDomain,
-          url: `http://${existingProjectWithGitURL.subDomain}.localhost:8000`
-        }
+        message: "You don't have access to this repository. Make sure it exists and you have permission."
       });
     }
+    throw error;
+  }
 
+
+  // ✅ Check for duplicate (same user + same repo)
+  const existingProject = await prisma.project.findFirst({
+    where: {
+      userId: userId,
+      gitURL: gitURL
+    }
+  });
+
+  if (existingProject) {
+    return res.status(409).json({
+      error: "You already deployed this repository",
+      existingProject: {
+        id: existingProject.id,
+        name: existingProject.name,
+        subDomain: existingProject.subDomain,
+        url: `http://${existingProject.subDomain}.localhost:8000`
+      }
+    });
+  }
+
+
+
+  try {
     // Generate slug if user doesn't provide custom domain
     const projectSlug = slug || generateSlug();
 
@@ -161,6 +202,94 @@ export const createProject = async (req, res, ecsClient) => {
     });
   }
 };
+
+// ============================================
+// NEW ENDPOINTS FOR GITHUB AUTH
+// ============================================
+
+export const connectGitHub = (req, res) => {
+  const userId = req.auth.userId;
+  
+  // Redirect to GitHub OAuth
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${process.env.GITHUB_CALLBACK_URL}&scope=repo&state=${userId}`;
+  
+  res.redirect(githubAuthUrl);
+};
+
+export const githubCallback = async (req, res) => {
+  const { code, state: userId } = req.query;
+
+  try {
+    // Exchange code for access token
+    const tokenResponse = await axios.post(
+      'https://github.com/login/oauth/access_token',
+      {
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code: code
+      },
+      {
+        headers: { Accept: 'application/json' }
+      }
+    );
+
+    const accessToken = tokenResponse.data.access_token;
+
+    // Get GitHub user info
+    const octokit = new Octokit({ auth: accessToken });
+    const { data: githubUser } = await octokit.users.getAuthenticated();
+
+    // Save to database
+    await prisma.user.upsert({
+      where: { clerkId: userId },
+      update: {
+        githubAccessToken: accessToken,
+        githubUsername: githubUser.login
+      },
+      create: {
+        clerkId: userId,
+        githubAccessToken: accessToken,
+        githubUsername: githubUser.login
+      }
+    });
+
+    // Redirect back to frontend
+    res.redirect(`${process.env.FRONTEND_URL}/dashboard?github=connected`);
+
+  } catch (error) {
+    console.error("GitHub OAuth Error:", error);
+    res.redirect(`${process.env.FRONTEND_URL}/dashboard?github=error`);
+  }
+};
+
+export const disconnectGitHub = async (req, res) => {
+  const userId = req.auth.userId;
+
+  await prisma.user.update({
+    where: { clerkId: userId },
+    data: {
+      githubAccessToken: null,
+      githubUsername: null
+    }
+  });
+
+  res.json({ success: true, message: "GitHub disconnected" });
+};
+
+export const getGitHubStatus = async (req, res) => {
+  const userId = req.auth.userId;
+
+  const user = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    select: { githubUsername: true }
+  });
+
+  res.json({
+    connected: !!user?.githubUsername,
+    username: user?.githubUsername
+  });
+};
+
 
 // Get all projects of user
 export const getProjects = async (req, res) => {

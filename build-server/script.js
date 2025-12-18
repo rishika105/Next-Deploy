@@ -191,7 +191,7 @@ async function init() {
         const relativeKey = path.relative(distFolderPath, filePath);
 
         const command = new PutObjectCommand({
-          Bucket: "next-deploy-outputs4",
+          Bucket: "next-deploy-outputs5",
           Key: `__outputs/${SUB_DOMAIN}/${relativeKey}`,
           Body: fs.createReadStream(filePath),
           ContentType: mime.lookup(filePath) || "application/octet-stream",

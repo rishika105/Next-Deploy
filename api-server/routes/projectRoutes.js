@@ -1,5 +1,5 @@
 import express from "express";
-import { checkGitURL, createProject, deleteProject, getProjectById, getProjects, redeployProject } from "../controllers/projectController.js";
+import { checkGitURL, connectGitHub, createProject, deleteProject, disconnectGitHub, getGitHubStatus, getProjectById, getProjects, githubCallback, redeployProject } from "../controllers/projectController.js";
 import { ClerkExpressRequireAuth } from "@clerk/clerk-sdk-node";
 
 export default function projectRoutes(ecsClient) {
@@ -27,6 +27,16 @@ export default function projectRoutes(ecsClient) {
 
   // Delete project
   router.delete("/:projectId", ClerkExpressRequireAuth(), deleteProject);
+
+
+  // GitHub OAuth routes (NO auth middleware - public)
+router.get("/github/connect",ClerkExpressRequireAuth(), connectGitHub);
+router.get("/github/callback", githubCallback);
+
+// Protected routes
+router.post("/github/disconnect", ClerkExpressRequireAuth(), disconnectGitHub);
+router.get("/github/status", ClerkExpressRequireAuth(), getGitHubStatus);
+
 
 
   return router;

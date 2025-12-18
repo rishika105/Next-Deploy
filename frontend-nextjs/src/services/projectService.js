@@ -36,6 +36,7 @@ export const checkGitURLExists = async (token, gitURL) => {
   const res = await api.get(`/project?gitURL=${gitURL}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  console.log(res)
   return res.data;
 };
 

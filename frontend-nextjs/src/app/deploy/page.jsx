@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
@@ -13,6 +13,10 @@ import {
 } from "@headlessui/react";
 import { ChevronDown } from "lucide-react"; // or any icon you like
 import { useRouter } from "next/navigation";
+import GitHubConnection from "../components/GithubConnection";
+
+
+const API_URL = "http://localhost:9000/api/project";
 
 export default function Deploy() {
   const { getToken } = useAuth();
@@ -34,6 +38,19 @@ export default function Deploy() {
   const [checkingURL, setCheckingURL] = useState(false);
   const [existingProject, setExistingProject] = useState(null);
   const [isDuplicate, setIsDuplicate] = useState(false);
+  const [githubConnected, setGithubConnected] = useState(false);
+
+  useEffect(() => {
+    checkGitHubStatus();
+  }, []);
+
+  const checkGitHubStatus = async () => {
+    const token = await getToken();
+    const response = await axios.get(`${API_URL}/github/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setGithubConnected(response.data.connected);
+  };
 
   // ✅ Check Git URL on blur
   const handleGitURLBlur = async () => {
@@ -45,6 +62,7 @@ export default function Deploy() {
     try {
       const token = await getToken();
       const result = await checkGitURLExists(token, formData.gitURL);
+      console.log(result.exists);
 
       if (result.exists) {
         setExistingProject(result.project);
@@ -164,6 +182,7 @@ export default function Deploy() {
     <div className="min-h-screen bg-black text-white overflow-hidden">
       {/* Background Gradient */}
       <div className="" />
+      <GitHubConnection />
 
       <div className="relative z-10 container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
@@ -422,10 +441,19 @@ export default function Deploy() {
                   </div>
                 </div>
 
+                {!githubConnected && (
+                  <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg mb-6">
+                    <p className="text-yellow-400">
+                      ⚠️ Please connect your GitHub account above before
+                      deploying
+                    </p>
+                  </div>
+                )}
+
                 {/* Deploy Button */}
                 <button
                   type="submit"
-                  disabled={isDeploying}
+                  disabled={isDeploying || isDuplicate || !githubConnected}
                   className="w-full bg-gradient-to-r cursor-pointer text-black from-[#5227FF] to-[#FF9FFC] hover:from-[#5227FF] hover:to-[#FF9FFC] font-semibold py-4 px-8 rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-lg shadow-[#5227FF]/20"
                 >
                   {isDeploying ? (

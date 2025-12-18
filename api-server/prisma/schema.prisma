@@ -6,6 +6,14 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+model User {
+  id                 String   @id @default(uuid())
+  clerkId            String   @unique
+  githubAccessToken  String?  // OAuth token
+  githubUsername     String?  // GitHub username
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
 
 model Project {
   id            String       @id @default(uuid())
