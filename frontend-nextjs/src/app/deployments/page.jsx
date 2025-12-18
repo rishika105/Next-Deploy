@@ -2,9 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
-import toast, { Toaster } from "react-hot-toast";
 import Link from "next/link";
-import axios from "axios";
 import { getAllDeployments } from "@/services/deployService";
 import Footer from "../components/Footer";
 import { useRouter } from "next/navigation";

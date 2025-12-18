@@ -3,8 +3,6 @@
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
-import toast, { Toaster } from "react-hot-toast";
 import Footer from "../components/Footer";
 import { getProjects } from "@/services/projectService";
 import { useRouter } from "next/navigation";
@@ -43,20 +41,6 @@ export default function Overview() {
     fetchAllProjects();
   }, []);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "READY":
-        return "bg-green-500/20 text-green-400";
-      case "IN_PROGRESS":
-        return "bg-blue-500/20 text-blue-400";
-      case "FAIL":
-        return "bg-red-500/20 text-red-400";
-      case "QUEUED":
-        return "bg-yellow-500/20 text-yellow-400";
-      default:
-        return "bg-gray-500/20 text-gray-400";
-    }
-  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -137,7 +121,8 @@ export default function Overview() {
                         </div>
                       </div>
                       {/* project deployed url */}
-                      <Link
+                      {
+                        project.Deployment[0].status == "READY" ?    <Link
                         key={project.id} 
                         href={project?.subDomain}
                         target="_blank"
@@ -145,8 +130,12 @@ export default function Overview() {
                         rel="noopener noreferrer"
                         className=" font-extralight text-sm underline text-gray-400"
                       >
+                        {
+                          
+                        }
                         http://{project?.subDomain}/localhost:8000
-                      </Link>{" "}
+                      </Link> : <div className="text-[#d081cd] text-sm">Deployment failed.</div>
+                      }
                       {/* giturl */}
                       <Link
                         key={project.subDomain}

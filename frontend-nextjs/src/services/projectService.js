@@ -1,7 +1,7 @@
 import api from "./api/apiClient";
 
-export const createProject = async (token, data) => {
-  const res = await api.post("/project", data, {
+export const createProject = async (data, token) => {
+  const res = await api.post("/project/deploy", data, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -31,14 +31,6 @@ export const getProjectDetails = async (projectId, token) => {
   return res.data;
 };
 
-
-export const checkGitURLExists = async (token, gitURL) => {
-  const res = await api.get(`/project?gitURL=${gitURL}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  console.log(res)
-  return res.data;
-};
 
 export const redeployProject = async (token, projectId) => {
   const response = await api.post(
