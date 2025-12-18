@@ -41,7 +41,6 @@ export default function Overview() {
     fetchAllProjects();
   }, []);
 
-
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -121,21 +120,23 @@ export default function Overview() {
                         </div>
                       </div>
                       {/* project deployed url */}
-                      {
-                        project.Deployment[0].status == "READY" ?    <Link
-                        key={project.id} 
-                        href={project?.subDomain}
-                        target="_blank"
-                        onClick={(e) => e.stopPropagation()}
-                        rel="noopener noreferrer"
-                        className=" font-extralight text-sm underline text-gray-400"
-                      >
-                        {
-                          
-                        }
-                        http://{project?.subDomain}/localhost:8000
-                      </Link> : <div className="text-[#d081cd] text-sm">Deployment failed.</div>
-                      }
+                      {project.Deployment[0].status == "READY" ? (
+                        <Link
+                          key={project.id}
+                          href={`http://${project.subDomain}.localhost:8000`}
+                          target="_blank"
+                          onClick={(e) => e.stopPropagation()}
+                          rel="noopener noreferrer"
+                          className=" font-extralight text-sm underline text-gray-400"
+                        >
+                          {}
+                          http://{project?.subDomain}/localhost:8000
+                        </Link>
+                      ) : (
+                        <div className="text-[#d081cd] text-sm">
+                          Deployment failed.
+                        </div>
+                      )}
                       {/* giturl */}
                       <Link
                         key={project.subDomain}
