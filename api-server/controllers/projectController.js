@@ -2,8 +2,7 @@ import { RunTaskCommand, LaunchType } from "@aws-sdk/client-ecs";
 import { generateSlug } from "random-word-slugs";
 import { PrismaClient } from "@prisma/client";
 import { Octokit } from "@octokit/rest";
-import axios from "axios"
-
+import axios from "axios";
 
 const config = {
   CLUSTER: "arn:aws:ecs:us-east-1:471112546627:cluster/builder-cluster",
@@ -12,207 +11,103 @@ const config = {
 
 const prisma = new PrismaClient();
 
-// Create project deployment
-export const createProject = async (req, res, ecsClient) => {
-  const {
-    gitURL,
-    slug,
-    projectName,
-    framework = "react",
-    rootDirectory = "",
-    envVariables = {}
-  } = req.body;
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 
-  const userId = req.auth.userId;
-
-  if (!userId || !projectName) {
-    return res.status(400).json({
-      success: false,
-      message: "User or project name not found"
-    });
-  }
-
-  // ✅ GET USER'S GITHUB TOKEN
+const getUser = async (userId) => {
   const user = await prisma.user.findUnique({
     where: { clerkId: userId },
     select: { githubAccessToken: true, githubUsername: true }
   });
 
   if (!user?.githubAccessToken) {
-    return res.status(403).json({
-      success: false,
-      message: "Please connect your GitHub account first",
-      needsGitHubAuth: true
-    });
+    throw new Error("GITHUB_NOT_CONNECTED");
   }
 
-  // ✅ VERIFY REPO ACCESS
-  const octokit = new Octokit({
-    auth: user.githubAccessToken
-  });
+  return user;
+};
 
-  // Parse owner/repo from URL
+const parseGitHubUrl = (gitURL) => {
   const repoMatch = gitURL.match(/github\.com\/([^\/]+)\/([^\/\.]+)/);
   if (!repoMatch) {
-    return res.status(400).json({ success: false, message: "Invalid GitHub URL" });
+    throw new Error("INVALID_GITHUB_URL");
   }
+  return { owner: repoMatch[1], repoName: repoMatch[2] };
+};
 
-  const [, owner, repoName] = repoMatch;
+const verifyRepoAccess = async (githubToken, owner, repoName) => {
+  const octokit = new Octokit({ auth: githubToken });
 
   try {
-    // Check if user has access to repo
-    await octokit.repos.get({
-      owner,
-      repo: repoName
-    });
-    // ✅ User has access!
+    await octokit.repos.get({ owner, repo: repoName });
+    return true;
   } catch (error) {
     if (error.status === 404) {
-      return res.status(403).json({
-        success: false,
-        message: "You don't have access to this repository. Make sure it exists and you have permission."
-      });
+      throw new Error("REPO_ACCESS_DENIED");
     }
     throw error;
   }
+};
 
+const checkProjectExists = async (userId, gitURL) => {
+  return await prisma.project.findFirst({
+    where: { userId, gitURL }
+  });
+};
 
-  // ✅ Check for duplicate (same user + same repo)
-  const existingProject = await prisma.project.findFirst({
-    where: {
-      userId: userId,
-      gitURL: gitURL
-    }
+const checkSlugAvailable = async (slug) => {
+  const existing = await prisma.project.findFirst({
+    where: { subDomain: slug }
+  });
+  return !existing;
+};
+
+const createECSTask = async (ecsClient, project, deployment, envVariables) => {
+  const command = new RunTaskCommand({
+    cluster: config.CLUSTER,
+    taskDefinition: config.TASK,
+    launchType: LaunchType.FARGATE,
+    count: 1,
+    taskRoleArn: "arn:aws:iam::471112546627:role/vercel-clone-task-role",
+    networkConfiguration: {
+      awsvpcConfiguration: {
+        assignPublicIp: "ENABLED",
+        subnets: [
+          "subnet-048917ed4b29cacf3",
+          "subnet-0e3876698af79dea0",
+          "subnet-0c9f495b29954cd5c",
+        ],
+        securityGroups: ["sg-02f3bcf249107bc7b"],
+      },
+    },
+    overrides: {
+      containerOverrides: [
+        {
+          name: "builder-image",
+          environment: [
+            { name: "GIT_REPOSITORY_URL", value: project.gitURL },
+            { name: "SUB_DOMAIN", value: project.subDomain },
+            { name: "PROJECT_ID", value: project.id },
+            { name: "DEPLOYMENT_ID", value: deployment.id },
+            { name: "ROOT_DIRECTORY", value: project.rootDirectory || "" },
+            { name: "ENV_VARIABLES", value: JSON.stringify(envVariables) },
+          ],
+        },
+      ],
+    },
   });
 
-  if (existingProject) {
-    return res.status(409).json({
-      error: "You already deployed this repository",
-      existingProject: {
-        id: existingProject.id,
-        name: existingProject.name,
-        subDomain: existingProject.subDomain,
-        url: `http://${existingProject.subDomain}.localhost:8000`
-      }
-    });
-  }
-
-
-
-  try {
-    // Generate slug if user doesn't provide custom domain
-    const projectSlug = slug || generateSlug();
-
-    // Check if slug already taken
-    const existingProject = await prisma.project.findFirst({
-      where: { subDomain: projectSlug }
-    });
-
-    if (existingProject) {
-      return res.status(409).json({
-        success: false,
-        message: `Subdomain "${projectSlug}" is already taken. Please choose another.`
-      });
-    }
-
-    // ✅ CREATE PROJECT IN DATABASE
-    const project = await prisma.project.create({
-      data: {
-        userId: userId,
-        name: projectName,
-        gitURL: gitURL,
-        subDomain: projectSlug,
-        framework,
-        rootDirectory,
-        envVariables
-      }
-    });
-
-    // ✅ CREATE DEPLOYMENT WITH STATUS: QUEUED
-    const deployment = await prisma.deployment.create({
-      data: {
-        userId: userId,
-        projectId: project.id,
-        status: "QUEUED"
-      }
-    });
-
-    // Spin up container/run task
-    const command = new RunTaskCommand({
-      cluster: config.CLUSTER,
-      taskDefinition: config.TASK,
-      launchType: LaunchType.FARGATE,
-      count: 1,
-      taskRoleArn: "arn:aws:iam::471112546627:role/vercel-clone-task-role",
-      networkConfiguration: {
-        awsvpcConfiguration: {
-          assignPublicIp: "ENABLED",
-          subnets: [
-            "subnet-048917ed4b29cacf3",
-            "subnet-0e3876698af79dea0",
-            "subnet-0c9f495b29954cd5c",
-          ],
-          securityGroups: ["sg-02f3bcf249107bc7b"],
-        },
-      },
-      overrides: {
-        containerOverrides: [
-          {
-            name: "builder-image",
-            environment: [
-              { name: "GIT_REPOSITORY_URL", value: gitURL },
-              { name: "SUB_DOMAIN", value: projectSlug },
-              { name: "PROJECT_ID", value: project.id },
-              { name: "DEPLOYMENT_ID", value: deployment.id },
-              { name: "ROOT_DIRECTORY", value: rootDirectory },
-              { name: "ENV_VARIABLES", value: JSON.stringify(envVariables) },
-            ],
-          },
-        ],
-      },
-    });
-
-    const response = await ecsClient.send(command);
-    console.log("ECS Task started:", response.tasks?.[0]?.taskArn);
-
-    // ✅ UPDATE STATUS TO IN_PROGRESS
-    await prisma.deployment.update({
-      where: { id: deployment.id },
-      data: { status: "IN_PROGRESS" }
-    });
-
-    console.log(`Deployed link: http://${projectSlug}.localhost:8000`);
-
-    return res.json({
-      success: true,
-      status: "queued",
-      data: {
-        projectId: project.id,
-        deploymentId: deployment.id,
-        projectSlug,
-        ecsTaskArn: response.tasks?.[0]?.taskArn,
-        url: `http://${projectSlug}.localhost:8000`,
-      },
-    });
-  } catch (err) {
-    console.error("ECS Error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to start ECS task"
-    });
-  }
+  return await ecsClient.send(command);
 };
 
 // ============================================
-// NEW ENDPOINTS FOR GITHUB AUTH
+// GITHUB AUTH ENDPOINTS
 // ============================================
 
 export const connectGitHub = (req, res) => {
   const userId = req.auth.userId;
-  
-  // Redirect to GitHub OAuth
   const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${process.env.GITHUB_CALLBACK_URL}&scope=repo&state=${userId}`;
-  
   res.redirect(githubAuthUrl);
 };
 
@@ -220,7 +115,6 @@ export const githubCallback = async (req, res) => {
   const { code, state: userId } = req.query;
 
   try {
-    // Exchange code for access token
     const tokenResponse = await axios.post(
       'https://github.com/login/oauth/access_token',
       {
@@ -228,18 +122,13 @@ export const githubCallback = async (req, res) => {
         client_secret: process.env.GITHUB_CLIENT_SECRET,
         code: code
       },
-      {
-        headers: { Accept: 'application/json' }
-      }
+      { headers: { Accept: 'application/json' } }
     );
 
     const accessToken = tokenResponse.data.access_token;
-
-    // Get GitHub user info
     const octokit = new Octokit({ auth: accessToken });
     const { data: githubUser } = await octokit.users.getAuthenticated();
 
-    // Save to database
     await prisma.user.upsert({
       where: { clerkId: userId },
       update: {
@@ -253,12 +142,10 @@ export const githubCallback = async (req, res) => {
       }
     });
 
-    // Redirect back to frontend
-    res.redirect(`${process.env.FRONTEND_URL}/dashboard?github=connected`);
-
+    res.redirect(`${process.env.FRONTEND_URL}/deploy?github=connected`);
   } catch (error) {
     console.error("GitHub OAuth Error:", error);
-    res.redirect(`${process.env.FRONTEND_URL}/dashboard?github=error`);
+    res.redirect(`${process.env.FRONTEND_URL}/deploy?github=error`);
   }
 };
 
@@ -281,7 +168,7 @@ export const getGitHubStatus = async (req, res) => {
 
   const user = await prisma.user.findUnique({
     where: { clerkId: userId },
-    select: { githubUsername: true }
+    select: { githubUsername: true, githubAccessToken: true }
   });
 
   res.json({
@@ -290,46 +177,205 @@ export const getGitHubStatus = async (req, res) => {
   });
 };
 
+// ============================================
+//  GET USER'S GITHUB REPOSITORIES
+// ============================================
 
-// Get all projects of user
-export const getProjects = async (req, res) => {
+export const getUserRepositories = async (req, res) => {
+  const userId = req.auth.userId;
+
   try {
-    const id = req.auth.userId;
-    if (!id) {
-      return res.status(404).json({
-        success: true,
-        message: "User not found"
-      });
-    }
+    const user = await getUser(userId);
+    const octokit = new Octokit({ auth: user.githubAccessToken });
 
-    const projects = await prisma.project.findMany({
-      where: { userId: id },
-      orderBy: { createdAt: 'desc' }
+    // Get user's repos (both owned and collaborated)
+    const { data: repos } = await octokit.repos.listForAuthenticatedUser({
+      sort: 'updated',
+      per_page: 100,
+      affiliation: 'owner,collaborator'
     });
 
-    if (projects.length === 0) {
-      return res.status(200).json([]);
-    }
+    // Get already deployed projects to mark them
+    const deployedProjects = await prisma.project.findMany({
+      where: { userId },
+      select: { gitURL: true }
+    });
 
-    return res.status(200).json({
+    const deployedUrls = new Set(deployedProjects.map(p => p.gitURL));
+
+    const formattedRepos = repos.map(repo => ({
+      id: repo.id,
+      name: repo.name,
+      fullName: repo.full_name,
+      url: repo.html_url,
+      private: repo.private,
+      description: repo.description,
+      updatedAt: repo.updated_at,
+      defaultBranch: repo.default_branch,
+      isDeployed: deployedUrls.has(repo.html_url)
+    }));
+
+    res.json({
       success: true,
-      projects
+      repositories: formattedRepos
     });
   } catch (error) {
-    console.log("Get projects error: ", error);
-    return res.status(500).json({
+    if (error.message === "GITHUB_NOT_CONNECTED") {
+      return res.status(403).json({
+        success: false,
+        message: "GitHub not connected",
+        needsGitHubAuth: true
+      });
+    }
+    console.error("Fetch repositories error:", error);
+    res.status(500).json({
       success: false,
-      message: "Server error getting projects"
+      message: "Failed to fetch repositories"
     });
   }
 };
 
-// ✅ NEW: Get single project by ID
-export const getProjectById = async (req, res) => {
+// ============================================
+// PROJECT DEPLOYMENT
+// ============================================
+
+export const createProject = async (req, res, ecsClient) => {
+  const {
+    gitURL,
+    slug,
+    projectName,
+    framework = "react",
+    rootDirectory = "",
+    envVariables = {}
+  } = req.body;
+
+  const userId = req.auth.userId;
+
+  if (!userId || !projectName || !gitURL) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields"
+    });
+  }
+
+  try {
+    // Get user and verify GitHub connection
+    const user = await getUser(userId);
+
+    // Parse and verify repository access
+    const { owner, repoName } = parseGitHubUrl(gitURL);
+    await verifyRepoAccess(user.githubAccessToken, owner, repoName);
+
+    // Check for duplicate deployment
+    const existingProject = await checkProjectExists(userId, gitURL);
+    if (existingProject) {
+      return res.status(409).json({
+        success: false,
+        message: "Repository already deployed",
+        existingProject: {
+          id: existingProject.id,
+          name: existingProject.name,
+          subDomain: existingProject.subDomain,
+          url: `http://${existingProject.subDomain}.localhost:8000`
+        }
+      });
+    }
+
+    // Generate and verify slug
+    const projectSlug = slug || generateSlug();
+    const slugAvailable = await checkSlugAvailable(projectSlug);
+
+    if (!slugAvailable) {
+      return res.status(409).json({
+        success: false,
+        message: `Subdomain "${projectSlug}" is already taken`
+      });
+    }
+
+    // Create project
+    const project = await prisma.project.create({
+      data: {
+        userId,
+        name: projectName,
+        gitURL,
+        subDomain: projectSlug,
+        framework,
+        rootDirectory,
+        envVariables
+      }
+    });
+
+    // Create deployment
+    const deployment = await prisma.deployment.create({
+      data: {
+        userId,
+        projectId: project.id,
+        status: "QUEUED"
+      }
+    });
+
+    // Start ECS task
+    const response = await createECSTask(ecsClient, project, deployment, envVariables);
+
+    // Update deployment status
+    await prisma.deployment.update({
+      where: { id: deployment.id },
+      data: { status: "IN_PROGRESS" }
+    });
+
+    console.log(`Deployed: http://${projectSlug}.localhost:8000`);
+
+    return res.json({
+      success: true,
+      status: "queued",
+      data: {
+        projectId: project.id,
+        deploymentId: deployment.id,
+        projectSlug,
+        ecsTaskArn: response.tasks?.[0]?.taskArn,
+        url: `http://${projectSlug}.localhost:8000`,
+      },
+    });
+
+  } catch (error) {
+    console.error("Deployment error:", error);
+
+    if (error.message === "GITHUB_NOT_CONNECTED") {
+      return res.status(403).json({
+        success: false,
+        message: "Please connect your GitHub account first",
+        needsGitHubAuth: true
+      });
+    }
+
+    if (error.message === "INVALID_GITHUB_URL") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid GitHub URL"
+      });
+    }
+
+    if (error.message === "REPO_ACCESS_DENIED") {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have access to this repository"
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to start deployment"
+    });
+  }
+};
+
+// ============================================
+// PROJECT MANAGEMENT
+// ============================================
+
+export const getProjects = async (req, res) => {
   try {
     const userId = req.auth.userId;
-    const { projectId } = req.params;
-
     if (!userId) {
       return res.status(404).json({
         success: false,
@@ -337,18 +383,51 @@ export const getProjectById = async (req, res) => {
       });
     }
 
-    if (!projectId) {
-      return res.status(400).json({
-        success: false,
-        message: "Project ID required"
-      });
-    }
+    const projects = await prisma.project.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        gitURL: true,
+        subDomain: true,
+        createdAt: true,
+        Deployment: {
+          select: {
+            status: true,
+            createdAt: true,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1, // 🔥 only latest deployment
+        },
+      },
+    });
+
+    // console.log(projects)
+
+    return res.status(200).json({
+      success: true,
+      projects,
+
+    });
+  } catch (error) {
+    console.error("Get projects error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error getting projects"
+    });
+  }
+};
+
+export const getProjectById = async (req, res) => {
+  try {
+    const userId = req.auth.userId;
+    const { projectId } = req.params;
 
     const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        userId: userId
-      }
+      where: { id: projectId, userId }
     });
 
     if (!project) {
@@ -361,10 +440,9 @@ export const getProjectById = async (req, res) => {
     return res.status(200).json({
       success: true,
       project
-    }
-    );
+    });
   } catch (error) {
-    console.log("Get project by ID error: ", error);
+    console.error("Get project error:", error);
     return res.status(500).json({
       success: false,
       message: "Server error getting project"
@@ -372,85 +450,26 @@ export const getProjectById = async (req, res) => {
   }
 };
 
-// ✅ NEW: Check if Git URL already exists for user
-export const checkGitURL = async (req, res) => {
-  try {
-    const userId = req.auth.userId;
-    const { gitURL } = req.query;
-
-    if (!userId) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    if (!gitURL) {
-      return res.status(400).json({
-        success: false,
-        message: "Git URL required"
-      });
-    }
-
-    const existingProject = await prisma.project.findFirst({
-      where: {
-        userId: userId,
-        gitURL: gitURL
-      }
-    });
-
-    if (existingProject) {
-      return res.status(200).json({
-        success: true,
-        exists: true,
-        project: {
-          id: existingProject.id,
-          name: existingProject.name,
-          subDomain: existingProject.subDomain,
-          url: `http://${existingProject.subDomain}.localhost:8000`
-        }
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      exists: false
-    });
-  } catch (error) {
-    console.log("Check Git URL error: ", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error checking Git URL"
-    });
-  }
-};
-
-//redeploy
 export const redeployProject = async (req, res, ecsClient) => {
   const userId = req.auth.userId;
   const { projectId } = req.params;
-  //if update env and deploy is triggered
   const { envVariables } = req.body;
 
-
-  if (!userId) {
-    return res.status(404).json({ error: "User not found" });
-  }
-
   try {
-    // Get current project details
     const project = await prisma.project.findFirst({
       where: { id: projectId, userId }
     });
 
     if (!project) {
-      return res.status(404).json({ error: "Project not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Project not found"
+      });
     }
 
-    // Update project with new env variables
-    const updatedProject = project;
+    // Update env variables if provided
     if (envVariables) {
-      updatedProject = await prisma.project.update({
+      await prisma.project.update({
         where: { id: projectId },
         data: { envVariables }
       });
@@ -459,94 +478,55 @@ export const redeployProject = async (req, res, ecsClient) => {
     // Create new deployment
     const deployment = await prisma.deployment.create({
       data: {
-        userId: userId,
+        userId,
         projectId: project.id,
         status: "QUEUED"
       }
     });
 
-    // Spin up ECS task with current project settings
-    const command = new RunTaskCommand({
-      cluster: config.CLUSTER,
-      taskDefinition: config.TASK,
-      launchType: LaunchType.FARGATE,
-      count: 1,
-      taskRoleArn: "arn:aws:iam::471112546627:role/vercel-clone-task-role",
-      networkConfiguration: {
-        awsvpcConfiguration: {
-          assignPublicIp: "ENABLED",
-          subnets: [
-            "subnet-048917ed4b29cacf3",
-            "subnet-0e3876698af79dea0",
-            "subnet-0c9f495b29954cd5c",
-          ],
-          securityGroups: ["sg-02f3bcf249107bc7b"],
-        },
-      },
-      overrides: {
-        containerOverrides: [
-          {
-            name: "builder-image",
-            environment: [
-              { name: "GIT_REPOSITORY_URL", value: project.gitURL },
-              { name: "SUB_DOMAIN", value: project.subDomain },
-              { name: "PROJECT_ID", value: project.id },
-              { name: "DEPLOYMENT_ID", value: deployment.id },
-              { name: "ROOT_DIRECTORY", value: project.rootDirectory || "" },
-              { name: "ENV_VARIABLES", value: JSON.stringify(updatedProject.envVariables) },
-            ],
-          },
-        ],
-      },
-    });
+    // Start ECS task
+    await createECSTask(ecsClient, project, deployment, envVariables || project.envVariables);
 
-    await ecsClient.send(command);
-
-    // Update deployment status
+    // Update status
     await prisma.deployment.update({
       where: { id: deployment.id },
       data: { status: "IN_PROGRESS" }
     });
 
     return res.json({
+      success: true,
       deploymentId: deployment.id,
       status: "IN_PROGRESS",
-      url: `http://${project.subDomain}.localhost:8000`,
-      message: "Redeployment started successfully"
+      url: `http://${project.subDomain}.localhost:8000`
     });
-
   } catch (error) {
-    console.log("Redeploy error: ", error);
-    return res.status(500).json({ error: "Server error redeploying project" });
+    console.error("Redeploy error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to redeploy project"
+    });
   }
 };
 
-
-// Delete project
 export const deleteProject = async (req, res) => {
   try {
     const userId = req.auth.userId;
     const { projectId } = req.params;
 
-    if (!userId) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    // Verify ownership
     const project = await prisma.project.findFirst({
-      where: { id: projectId, userId: userId }
+      where: { id: projectId, userId }
     });
 
     if (!project) {
-      return res.status(404).json({ success: false, message: "Project not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Project not found"
+      });
     }
 
-    // Delete associated deployments first
+    // Delete deployments first
     await prisma.deployment.deleteMany({
-      where: { projectId: projectId }
+      where: { projectId }
     });
 
     // Delete project
@@ -554,9 +534,15 @@ export const deleteProject = async (req, res) => {
       where: { id: projectId }
     });
 
-    return res.status(200).json({ success: true, message: "Project deleted successfully" });
+    return res.status(200).json({
+      success: true,
+      message: "Project deleted successfully"
+    });
   } catch (error) {
-    console.log("Delete project error: ", error);
-    return res.status(500).json({ success: false, message: "Server error deleting project" });
+    console.error("Delete project error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete project"
+    });
   }
 };
