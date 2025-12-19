@@ -2,13 +2,17 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Footer from "@/app/components/Footer";
 import {
   getProjectDeployments,
   getProjectDetails,
+  redeployProject,
 } from "@/services/projectService";
+import { EllipsisVertical } from "lucide-react";
+import { setRequestMeta } from "next/dist/server/request-meta";
+import toast from "react-hot-toast";
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -16,7 +20,21 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState(null);
   const [deployments, setDeployments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(false);
   const [deploymentsLoading, setDeploymentsLoading] = useState(true);
+  const modalRef = useRef();
+
+  //on click outside close modal
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        setModal(null);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
 
   //api calls
   useEffect(() => {
@@ -41,6 +59,18 @@ export default function ProjectDetailPage() {
       setDeployments(response.deployments);
     } finally {
       setDeploymentsLoading(false);
+    }
+  };
+
+  const handleRedeploy = async (projectId) => {
+    const token = await getToken();
+    const toastId = toast.loading("Loading...");
+    try {
+      const response = await redeployProject(token, projectId);
+      console.log("REDEPLOY RESPONSE ", response);
+      toast.success("Redeploying started!");
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
@@ -171,6 +201,25 @@ export default function ProjectDetailPage() {
           <div className="bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 mb-8">
             <h2 className="text-xl font-bold mb-6">Project Details</h2>
 
+            {/* redeploy */}
+            <div
+              onClick={() => {
+                setModal(true);
+              }}
+              ref={modalRef}
+            >
+              <EllipsisVertical className="cursor-pointer absolute right-4 top-4" />
+            </div>
+
+            {modal && (
+              <button
+                className="bg-black w-fit mx-auto text-center rounded-md h-[20%] absolute right-4 top-4 z-20 cursor-pointer text-sm p-2 border border-gray-800"
+                onClick={() => handleRedeploy(project.id)}
+              >
+                Redploy Latest Commit
+              </button>
+            )}
+
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <p className="text-sm text-gray-400 mb-1">Deployment URL</p>
@@ -262,6 +311,7 @@ export default function ProjectDetailPage() {
           <div className="bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
               <h2 className="text-xl font-bold">Deployments</h2>
+
               <span className="text-sm text-gray-400">
                 {deployments.length} total
               </span>

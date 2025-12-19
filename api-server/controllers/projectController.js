@@ -36,6 +36,8 @@ const parseGitHubUrl = (gitURL) => {
   return { owner: repoMatch[1], repoName: repoMatch[2] };
 };
 
+
+// github read write permission access
 const verifyRepoAccess = async (githubToken, owner, repoName) => {
   const octokit = new Octokit({ auth: githubToken });
 
@@ -63,7 +65,7 @@ const checkSlugAvailable = async (slug) => {
   return !existing;
 };
 
-const createECSTask = async (ecsClient, project, deployment, envVariables) => {
+const createECSTask = async (ecsClient, project, deployment, envVariables, githubToken, branch = "main") => {
   const command = new RunTaskCommand({
     cluster: config.CLUSTER,
     taskDefinition: config.TASK,
@@ -92,6 +94,8 @@ const createECSTask = async (ecsClient, project, deployment, envVariables) => {
             { name: "DEPLOYMENT_ID", value: deployment.id },
             { name: "ROOT_DIRECTORY", value: project.rootDirectory || "" },
             { name: "ENV_VARIABLES", value: JSON.stringify(envVariables) },
+            { name: "GITHUB_TOKEN", value: githubToken }, // ✅ Pass token to container
+            { name: "BRANCH", value: branch },
           ],
         },
       ],
@@ -315,7 +319,7 @@ export const createProject = async (req, res, ecsClient) => {
     });
 
     // Start ECS task
-    const response = await createECSTask(ecsClient, project, deployment, envVariables);
+    const response = await createECSTask(ecsClient, project, deployment, envVariables, user.githubAccessToken);
 
     // Update deployment status
     await prisma.deployment.update({
@@ -453,7 +457,8 @@ export const getProjectById = async (req, res) => {
 export const redeployProject = async (req, res, ecsClient) => {
   const userId = req.auth.userId;
   const { projectId } = req.params;
-  const { envVariables } = req.body;
+  const { envVariables = null } = req.body;
+  const user = await getUser(userId);
 
   try {
     const project = await prisma.project.findFirst({
@@ -485,7 +490,7 @@ export const redeployProject = async (req, res, ecsClient) => {
     });
 
     // Start ECS task
-    await createECSTask(ecsClient, project, deployment, envVariables || project.envVariables);
+    await createECSTask(ecsClient, project, deployment, envVariables || project.envVariables, user.githubAccessToken);
 
     // Update status
     await prisma.deployment.update({

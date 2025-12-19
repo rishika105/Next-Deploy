@@ -2,17 +2,41 @@
 
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Footer from "../components/Footer";
-import { getProjects } from "@/services/projectService";
+import { getProjects, redeployProject } from "@/services/projectService";
 import { useRouter } from "next/navigation";
+import { EllipsisVertical } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function Overview() {
   const { getToken } = useAuth();
   const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [openModalId, setOpenModalId] = useState(null);
+  const modalRef = useRef(null);
+  const [loading, setLoading] = useState(false);
 
+  //redeploy modal
+  //on click outside close modal
+  // useEffect(() => {
+  //   const handleClickOutside = (e) => {
+  //     if (modalRef.current && !modalRef.current.contains(e.target)) {
+  //       setOpenModalId(null);
+  //     }
+  //   };
+
+  //   document.addEventListener("click", handleClickOutside);
+  //   return () => document.removeEventListener("click", handleClickOutside);
+  // }, []);
+
+  // const handleModal = (e, projectId) => {
+  //   e.stopPropagation();
+  //   // console.log(projectId)
+  //   setOpenModalId(projectId); //handle multiple states use ID
+  // };
+
+  //get repo path
   const getRepoPath = (url) => {
     try {
       const parts = url.split("/");
@@ -24,9 +48,9 @@ export default function Overview() {
     }
   };
 
+  //api calls
   const fetchAllProjects = async () => {
     const token = await getToken();
-
     try {
       setLoading(true);
       const response = await getProjects(token);
@@ -41,6 +65,8 @@ export default function Overview() {
     fetchAllProjects();
   }, []);
 
+
+  //format date
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -74,7 +100,7 @@ export default function Overview() {
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
                 <div className="w-16 h-16 border-4 border-[#5227FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-gray-400">Loading your projects...</p>
+                <p className="text-gray-400">Loading Projects...</p>
               </div>
             </div>
           ) : projects?.length === 0 ? (
@@ -109,7 +135,7 @@ export default function Overview() {
                     <div
                       key={project?.subDomain}
                       onClick={() => router.push(`/project/${project.id}`)}
-                      className="group bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 flex flex-col gap-2"
+                      className="group relative bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 flex flex-col gap-2"
                     >
                       {/* project name */}
                       <div className="flex items-start justify-between">
@@ -119,6 +145,26 @@ export default function Overview() {
                           </h3>
                         </div>
                       </div>
+
+                      {/* REDEPLOY */}
+                      {/* <div
+                        onClick={(e) => {
+                          handleModal(e, project.id);
+                        }}
+                        ref={modalRef}
+                      >
+                        <EllipsisVertical className="cursor-pointer size-5 absolute z-10 right-4 top-6" />
+                      </div> */}
+{/* 
+                      {openModalId === project.id && (
+                        <button
+                          className="bg-black w-[40%] mx-auto text-center rounded-md h-[20%] absolute right-4 z-20 text-sm p-2 border border-gray-800"
+                          onClick={() => handleRedeploy(project.id)}
+                        >
+                          Redploy Latest Commit
+                        </button>
+                      )} */}
+
                       {/* project deployed url */}
                       {project.Deployment[0].status == "READY" ? (
                         <Link

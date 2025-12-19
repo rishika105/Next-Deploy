@@ -33,14 +33,10 @@ export const getProjectDetails = async (projectId, token) => {
 
 
 export const redeployProject = async (token, projectId) => {
-  const response = await api.post(
-    `${API_URL}/project/${projectId}/redeploy`,
+  const res = await api.post(
+    `/project/${projectId}/redeploy`,
     {},
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-  return response.data;
+    { headers: { Authorization: `Bearer ${token}`},
+    });
+  return res.data;
 };

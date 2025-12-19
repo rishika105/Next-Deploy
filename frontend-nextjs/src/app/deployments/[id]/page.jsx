@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useParams } from "next/navigation";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Footer from "@/app/components/Footer";
 import {
@@ -19,37 +19,16 @@ export default function DeploymentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [logsLoading, setLogsLoading] = useState(true);
   const [isPolling, setIsPolling] = useState(true);
-  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true);
   const pollingIntervalRef = useRef(null);
-  const logsEndRef = useRef(null);
-  const autoScrollRef = useRef(true);
 
   const FINAL_STATUSES = ["READY", "FAIL"];
-
-  // Scroll to bottom function
-  const scrollToBottom = useCallback(() => {
-    if (logsEndRef.current && autoScrollRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, []);
-
-  // Handle scroll events in the modal
-  const handleLogsScroll = useCallback((e) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-    
-    if (isAtBottom) {
-      autoScrollRef.current = true;
-    } else {
-      autoScrollRef.current = false;
-    }
-  }, []);
 
   useEffect(() => {
     fetchDeploymentDetails();
     fetchLogs();
 
-    // Poll every 2 sec
+    //poll every 2 sec
     pollingIntervalRef.current = setInterval(() => {
       if (isPolling) {
         fetchDeploymentDetails();
@@ -73,16 +52,6 @@ export default function DeploymentDetailPage() {
     }
   }, [deployment]);
 
-  // Auto-scroll when modal is open and new logs arrive
-  useEffect(() => {
-    if (showLogsModal) {
-      // Small delay to ensure DOM is updated
-      setTimeout(() => {
-        scrollToBottom();
-      }, 100);
-    }
-  }, [logs, showLogsModal, scrollToBottom]);
-
   const fetchDeploymentDetails = async () => {
     try {
       const token = await getToken();
@@ -92,11 +61,12 @@ export default function DeploymentDetailPage() {
       setLoading(false);
     }
   };
-
   const fetchLogs = async () => {
     try {
       const token = await getToken();
       const response = await getDeploymentLogs(id, token);
+      // console.log("LOG RESPONSE:", response);
+
       const logsArray = response.rawLogs.data ?? [];
 
       const sorted = [...logsArray].sort(
@@ -108,7 +78,6 @@ export default function DeploymentDetailPage() {
       setLogsLoading(false);
     }
   };
-
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString("en-US", {
       month: "short",
@@ -117,20 +86,6 @@ export default function DeploymentDetailPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const handleOpenLogsModal = () => {
-    setShowLogsModal(true);
-    autoScrollRef.current = true;
-  };
-
-  const handleCloseLogsModal = () => {
-    setShowLogsModal(false);
-  };
-
-  const handleResumeAutoScroll = () => {
-    autoScrollRef.current = true;
-    scrollToBottom();
   };
 
   if (loading) {
@@ -288,18 +243,12 @@ export default function DeploymentDetailPage() {
             </div>
           </div>
 
-          {/* Logs Preview Section */}
+          {/* Logs Section */}
           <div className="bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl overflow-hidden">
             <div className="bg-gray-900/50 border-b border-gray-700 px-6 py-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold">Build Logs</h3>
                 <div className="flex items-center gap-4">
-                  <button
-                    onClick={handleOpenLogsModal}
-                    className="text-sm px-4 py-2 bg-[#B19EEF] cursor-pointer rounded-lg text-black transition-colors"
-                  >
-                    View Full Logs
-                  </button>
                   <span className="text-sm text-gray-400">
                     {logs.length} entries
                   </span>
@@ -316,8 +265,17 @@ export default function DeploymentDetailPage() {
               </div>
             </div>
 
-            {/* Logs Preview - Show last 10 logs */}
-            <div className="h-[300px] overflow-y-auto p-6 font-mono text-sm bg-black/30">
+            <div
+              className="h-[600px] overflow-y-auto p-6 font-mono text-sm bg-black/30"
+              onScroll={(e) => {
+                const { scrollTop, scrollHeight, clientHeight } = e.target;
+                if (scrollTop + clientHeight >= scrollHeight - 10) {
+                  setAutoScroll(true);
+                } else {
+                  setAutoScroll(false);
+                }
+              }}
+            >
               {logsLoading && logs.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
@@ -333,7 +291,7 @@ export default function DeploymentDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {logs.slice(-10).map((log, index) => (
+                  {logs.map((log, index) => (
                     <div
                       key={index}
                       className={`p-2 rounded ${
@@ -341,7 +299,7 @@ export default function DeploymentDetailPage() {
                           ? "bg-red-500/10 border-l-4 border-red-500"
                           : log.log.startsWith("WARN")
                           ? "bg-yellow-500/10 border-l-4 border-yellow-500"
-                          : log.log.includes("uploaded") ||
+                          : log.log.includes("Uploading") ||
                             log.log.includes("✅")
                           ? "bg-green-500/10 border-l-4 border-green-500"
                           : "hover:bg-gray-800/50 border-l-4 border-gray-700"
@@ -355,11 +313,21 @@ export default function DeploymentDetailPage() {
                             second: "2-digit",
                           })}
                         </span>
-                        <span className="flex-1 truncate">{log.log}</span>
+                        <span className="flex-1">{log.log}</span>
                       </div>
                     </div>
                   ))}
                 </div>
+              )}
+
+              {isPolling && autoScroll && (
+                <div
+                  ref={(el) => {
+                    if (el) {
+                      el.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
+                />
               )}
             </div>
 
@@ -399,130 +367,6 @@ export default function DeploymentDetailPage() {
         </div>
       </div>
       <Footer />
-
-      {/* Full Screen Logs Modal */}
-      {showLogsModal && (
-        <div className="fixed inset-0 z-50">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={handleCloseLogsModal}
-          />
-          
-          {/* Modal Content */}
-          <div className="absolute inset-4 md:inset-20 bg-gray-900/95 border border-gray-700 rounded-2xl overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="bg-gray-900/90 border-b border-gray-700 px-6 py-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold">Build Logs</h3>
-                <p className="text-sm text-gray-400 mt-1">
-                  Deployment ID: {id.substring(0, 12)}...
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center">
-                  <span
-                    className={`w-2 h-2 rounded-full mr-2 ${
-                      isPolling ? "bg-green-400 animate-pulse" : "bg-gray-400"
-                    }`}
-                  ></span>
-                  <span className="text-sm text-gray-400">
-                    {isPolling ? "Live" : "Completed"}
-                  </span>
-                </div>
-                {!autoScrollRef.current && (
-                  <button
-                    onClick={handleResumeAutoScroll}
-                    className="text-sm px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 rounded-lg transition-colors"
-                  >
-                    Follow logs
-                  </button>
-                )}
-                <button
-                  onClick={handleCloseLogsModal}
-                  className="text-sm px-4 py-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700 rounded-lg transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body - Logs */}
-            <div
-              className="flex-1 overflow-y-auto p-6 font-mono text-sm bg-black/30"
-              onScroll={handleLogsScroll}
-            >
-              {logsLoading && logs.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-[#5227FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-400">Loading logs...</p>
-                  </div>
-                </div>
-              ) : logs.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-400">
-                    {isPolling ? "Waiting for logs..." : "No logs available"}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {logs.map((log, index) => (
-                    <div
-                      key={index}
-                      className={`p-2 rounded ${
-                        log.log.startsWith("ERROR")
-                          ? "bg-red-500/10 border-l-4 border-red-500"
-                          : log.log.startsWith("WARN")
-                          ? "bg-yellow-500/10 border-l-4 border-yellow-500"
-                          : log.log.includes("uploaded") ||
-                            log.log.includes("✅")
-                          ? "bg-green-500/10 border-l-4 border-green-500"
-                          : "hover:bg-gray-800/50 border-l-4 border-gray-700"
-                      }`}
-                    >
-                      <div className="flex">
-                        <span className="text-gray-500 mr-4 w-16 flex-shrink-0">
-                          {new Date(log.timestamp).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                          })}
-                        </span>
-                        <span className="flex-1">{log.log}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {/* Scroll anchor */}
-                  <div ref={logsEndRef} />
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="bg-gray-900/90 border-t border-gray-700 px-6 py-3 flex items-center justify-between">
-              <div className="text-sm text-gray-400">
-                {logs.length} log entries
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-400">
-                  Status:{" "}
-                  <span className="text-white">{deployment.status}</span>
-                </div>
-                <button
-                  onClick={() => {
-                    fetchLogs();
-                    fetchDeploymentDetails();
-                  }}
-                  className="text-sm px-3 py-1 bg-gray-800/60 hover:bg-gray-700 border border-gray-700 rounded-lg transition-colors"
-                >
-                  Refresh Logs
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
