@@ -126,23 +126,14 @@ export default function DeploymentDetailPage() {
               <span className="text-white">{id.substring(0, 12)}...</span>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold mb-2">Deployment Details</h1>
-                <p className="text-gray-400">
-                  {deployment.project?.name && (
-                    <>
-                      Project:{" "}
-                      <Link
-                        href={`/project/${deployment.projectId}`}
-                        className="text-[#FF9FFC] hover:underline"
-                      >
-                        {deployment.projectId}
-                      </Link>
-                    </>
-                  )}
-                </p>
-              </div>
+            <div className="flex justify-between w-full">
+              <h1 className="text-2xl font-bold">Deployment Details</h1>
+              <Link
+                href={`/project/${deployment.projectId}`}
+                className="bg-gradient-to-r text-black from-[#6755ae] to-[#FF9FFC] px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg shadow-[#5227FF]/20"
+              >
+                Go to Project
+              </Link>
             </div>
           </div>
 

@@ -7,7 +7,6 @@ import Footer from "../components/Footer";
 import { getProjects, redeployProject } from "@/services/projectService";
 import { useRouter } from "next/navigation";
 import { EllipsisVertical } from "lucide-react";
-import toast from "react-hot-toast";
 
 export default function Overview() {
   const { getToken } = useAuth();
@@ -17,24 +16,24 @@ export default function Overview() {
   const modalRef = useRef(null);
   const [loading, setLoading] = useState(false);
 
-  //redeploy modal
+  //settings modal
   //on click outside close modal
-  // useEffect(() => {
-  //   const handleClickOutside = (e) => {
-  //     if (modalRef.current && !modalRef.current.contains(e.target)) {
-  //       setOpenModalId(null);
-  //     }
-  //   };
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        setOpenModalId(null);
+      }
+    };
 
-  //   document.addEventListener("click", handleClickOutside);
-  //   return () => document.removeEventListener("click", handleClickOutside);
-  // }, []);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
 
-  // const handleModal = (e, projectId) => {
-  //   e.stopPropagation();
-  //   // console.log(projectId)
-  //   setOpenModalId(projectId); //handle multiple states use ID
-  // };
+  const handleModal = (e, projectId) => {
+    e.stopPropagation();
+    // console.log(projectId)
+    setOpenModalId(projectId); //handle multiple states use ID
+  };
 
   //get repo path
   const getRepoPath = (url) => {
@@ -64,7 +63,6 @@ export default function Overview() {
   useEffect(() => {
     fetchAllProjects();
   }, []);
-
 
   //format date
   const formatDate = (dateString) => {
@@ -146,24 +144,27 @@ export default function Overview() {
                         </div>
                       </div>
 
-                      {/* REDEPLOY */}
-                      {/* <div
+                      {/* Settings modal */}
+                      <div
                         onClick={(e) => {
                           handleModal(e, project.id);
                         }}
                         ref={modalRef}
                       >
                         <EllipsisVertical className="cursor-pointer size-5 absolute z-10 right-4 top-6" />
-                      </div> */}
-{/* 
+                      </div>
+
                       {openModalId === project.id && (
                         <button
                           className="bg-black w-[40%] mx-auto text-center rounded-md h-[20%] absolute right-4 z-20 text-sm p-2 border border-gray-800"
-                          onClick={() => handleRedeploy(project.id)}
+                          onClick={() => {
+                            setOpenModalId(projectId);
+                            router.push(`/project/${project.id}/settings`);
+                          }}
                         >
-                          Redploy Latest Commit
+                          Project Settings
                         </button>
-                      )} */}
+                      )}
 
                       {/* project deployed url */}
                       {project.Deployment[0].status == "READY" ? (

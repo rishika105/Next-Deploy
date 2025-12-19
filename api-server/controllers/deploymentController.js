@@ -59,7 +59,11 @@ export const getDeployments = async (req, res) => {
 
     const deployments = await prisma.deployment.findMany({
       where: { userId: id },
-      include: { project: true }
+      include: { project: true },
+      orderBy: [
+        { updatedAt: "desc" },
+        { createdAt: "desc" }
+      ]
     });
 
     if (deployments.length === 0)
@@ -94,7 +98,11 @@ export const getDeploymentsByProjectId = async (req, res) => {
 
     const deployments = await prisma.deployment.findMany({
       where: { userId: id, projectId },
-      include: { project: true }
+      include: { project: true },
+      orderBy: [
+        { updatedAt: "desc" },
+        { createdAt: "desc" }
+      ]
     });
 
     if (deployments.length === 0)

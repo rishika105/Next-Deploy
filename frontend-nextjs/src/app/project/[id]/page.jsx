@@ -11,8 +11,8 @@ import {
   redeployProject,
 } from "@/services/projectService";
 import { EllipsisVertical } from "lucide-react";
-import { setRequestMeta } from "next/dist/server/request-meta";
 import toast from "react-hot-toast";
+
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -23,6 +23,7 @@ export default function ProjectDetailPage() {
   const [modal, setModal] = useState(false);
   const [deploymentsLoading, setDeploymentsLoading] = useState(true);
   const modalRef = useRef();
+  const router = useRouter()
 
   //on click outside close modal
   useEffect(() => {
@@ -69,6 +70,8 @@ export default function ProjectDetailPage() {
       const response = await redeployProject(token, projectId);
       console.log("REDEPLOY RESPONSE ", response);
       toast.success("Redeploying started!");
+      const id = response.deploymentId;
+      router.push(`/deployments/${id}`)
     } finally {
       toast.dismiss(toastId);
     }
@@ -99,7 +102,9 @@ export default function ProjectDetailPage() {
     });
   };
 
+
   const latestDeployment = deployments[0];
+  //console.log(latestDeployment)
 
   if (loading) {
     return (
