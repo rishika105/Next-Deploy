@@ -29,7 +29,7 @@ const kafka = new Kafka({
   },
   sasl: {
     username: 'avnadmin',
-    password: 'AVNS_Z2KJholFPlGfRXUZ0mP',
+    password: 'AVNS_hUsLGDLw76g5QVc5d9W',
     mechanism: 'plain'
   }
 });

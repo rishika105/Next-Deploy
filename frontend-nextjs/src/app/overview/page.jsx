@@ -18,22 +18,19 @@ export default function Overview() {
 
   //settings modal
   //on click outside close modal
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) {
-        setOpenModalId(null);
-      }
-    };
+useEffect(() => {
+  if (!openModalId) return;
 
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
-
-  const handleModal = (e, projectId) => {
-    e.stopPropagation();
-    // console.log(projectId)
-    setOpenModalId(projectId); //handle multiple states use ID
+  const handleClickOutside = (e) => {
+    if (modalRef.current && !modalRef.current.contains(e.target)) {
+      setOpenModalId(null);
+    }
   };
+
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, [openModalId]);
+
 
   //get repo path
   const getRepoPath = (url) => {
@@ -53,7 +50,7 @@ export default function Overview() {
     try {
       setLoading(true);
       const response = await getProjects(token);
-      console.log(response);
+      // console.log(response);
       setProjects(response.projects);
     } finally {
       setLoading(false);
@@ -80,7 +77,7 @@ export default function Overview() {
           {/* Header */}
           <div className="mb-8 flex items-center justify-between ">
             <div>
-              <h1 className="text-xl font-bold mb-2">
+              <h1 className="font-bold mb-2 text-2xl">
                 <span className="bg-gradient-to-r text-gray-100 bg-clip-text">
                   Projects
                 </span>
@@ -147,23 +144,35 @@ export default function Overview() {
                       {/* Settings modal */}
                       <div
                         onClick={(e) => {
-                          handleModal(e, project.id);
+                          e.stopPropagation();
+                          console.log(project.id);
+                          setOpenModalId(
+                            openModalId === project.id ? null : project.id
+                          );
+
+                          // console.log(openModalId);
                         }}
-                        ref={modalRef}
                       >
                         <EllipsisVertical className="cursor-pointer size-5 absolute z-10 right-4 top-6" />
                       </div>
 
                       {openModalId === project.id && (
-                        <button
-                          className="bg-black w-[40%] mx-auto text-center rounded-md h-[20%] absolute right-4 z-20 text-sm p-2 border border-gray-800"
-                          onClick={() => {
-                            setOpenModalId(projectId);
-                            router.push(`/project/${project.id}/settings`);
-                          }}
+                        <div
+                          ref={modalRef}
+                          onClick={(e) => e.stopPropagation()}
+                          className="bg-black absolute w-[40%] right-4 top-6 z-20 text-sm p-2 border border-gray-800 rounded-md"
                         >
-                          Project Settings
-                        </button>
+                          <button
+                            className="w-full text-left hover:bg-gray-900 cursor-pointer p-2 rounded"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenModalId(null);
+                              router.push(`/project/${project.id}/settings`);
+                            }}
+                          >
+                            Project Settings
+                          </button>
+                        </div>
                       )}
 
                       {/* project deployed url */}
@@ -180,7 +189,7 @@ export default function Overview() {
                           http://{project?.subDomain}/localhost:8000
                         </Link>
                       ) : (
-                        <div className="text-[#d081cd] text-sm">
+                        <div className="text-red-400 opacity-70 text-sm">
                           Deployment failed.
                         </div>
                       )}

@@ -32,7 +32,7 @@ const clickhouseClient = createClient({
   url: process.env.CLICKHOUSE_URL,
   database: 'default',
   username: 'avnadmin',
-  password: 'AVNS_2CzvvpUp28yOvJYcIrt'
+  password: 'AVNS_Hsuxytl6jqGEFztgznL'
 })
 
 const __filename = fileURLToPath(import.meta.url);
@@ -47,7 +47,7 @@ const kafka = new Kafka({
   },
   sasl: {
     username: 'avnadmin',
-    password: 'AVNS_Z2KJholFPlGfRXUZ0mP',
+    password: 'AVNS_hUsLGDLw76g5QVc5d9W',
     mechanism: 'plain'
   }
 })

@@ -13,7 +13,6 @@ import {
 import { EllipsisVertical } from "lucide-react";
 import toast from "react-hot-toast";
 
-
 export default function ProjectDetailPage() {
   const { id } = useParams();
   const { getToken } = useAuth();
@@ -23,7 +22,7 @@ export default function ProjectDetailPage() {
   const [modal, setModal] = useState(false);
   const [deploymentsLoading, setDeploymentsLoading] = useState(true);
   const modalRef = useRef();
-  const router = useRouter()
+  const router = useRouter();
 
   //on click outside close modal
   useEffect(() => {
@@ -71,7 +70,7 @@ export default function ProjectDetailPage() {
       console.log("REDEPLOY RESPONSE ", response);
       toast.success("Redeploying started!");
       const id = response.deploymentId;
-      router.push(`/deployments/${id}`)
+      router.push(`/deployments/${id}`);
     } finally {
       toast.dismiss(toastId);
     }
@@ -101,7 +100,6 @@ export default function ProjectDetailPage() {
       minute: "2-digit",
     });
   };
-
 
   const latestDeployment = deployments[0];
   //console.log(latestDeployment)
@@ -217,12 +215,16 @@ export default function ProjectDetailPage() {
             </div>
 
             {modal && (
-              <button
-                className="bg-black w-fit mx-auto text-center rounded-md h-[20%] absolute right-4 top-4 z-20 cursor-pointer text-sm p-2 border border-gray-800"
-                onClick={() => handleRedeploy(project.id)}
+              <div
+                className="bg-black absolute w-fit right-4 top-4 z-20 text-sm p-2 border border-gray-800 rounded-md"
               >
-                Redploy Latest Commit
-              </button>
+                <button
+                  className="w-full text-left hover:bg-gray-900 cursor-pointer p-2 rounded"
+                  onClick={() => handleRedeploy(project.id)}
+                >
+                  Redploy Latest Commit
+                </button>
+              </div>
             )}
 
             <div className="grid md:grid-cols-2 gap-6">

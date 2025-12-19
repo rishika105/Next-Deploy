@@ -5,7 +5,7 @@ const clickhouseClient = createClient({
     url: process.env.CLICKHOUSE_URL,
     database: 'default',
     username: 'avnadmin',
-    password: 'AVNS_2CzvvpUp28yOvJYcIrt'
+    password: 'AVNS_Hsuxytl6jqGEFztgznL'
 })
 
 export const fetchLogs = async (req, res) => {
