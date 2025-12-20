@@ -1,19 +1,17 @@
 import express from "express";
-import dotenv from "dotenv";
 import { ECSClient } from "@aws-sdk/client-ecs";
 import projectRoutes from "./routes/projectRoutes.js";
 import logRoutes from "./routes/logRoutes.js";
 import cors from "cors"
-import { Kafka } from "kafkajs"
 import { v4 as uuidv4 } from "uuid";
-import fs from "fs";
-import path from "path";
-import { createClient } from "@clickhouse/client";
-import { fileURLToPath } from "url";
 import { PrismaClient } from "@prisma/client";
 import deployRoutes from "./routes/deployRoutes.js";
+import { kafka } from "./libs/kafkaClient.js";
+import { clickhouseClient } from "./libs/clickhouseClient.js";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env", override: true });
 
-dotenv.config();
+
 
 const app = express();
 app.use(express.json());
@@ -27,30 +25,7 @@ const ecsClient = new ECSClient({
   region: "us-east-1"
 });
 
-//clickhouse db
-const clickhouseClient = createClient({
-  url: process.env.CLICKHOUSE_URL,
-  database: 'default',
-  username: 'avnadmin',
-  password: 'AVNS_Hsuxytl6jqGEFztgznL'
-})
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-//kafka
-const kafka = new Kafka({
-  clientId: `api-server`,
-  brokers: [process.env.KAFKA_URL],  //SERVICE URI
-  ssl: {
-    ca: [fs.readFileSync(path.join(__dirname, 'kafka.pem'), 'utf-8')]
-  },
-  sasl: {
-    username: 'avnadmin',
-    password: 'AVNS_hUsLGDLw76g5QVc5d9W',
-    mechanism: 'plain'
-  }
-})
 
 //consume logs produced in kafka topic created in script.js
 const logsConsumer = kafka.consumer({ groupId: 'api-server-logs-consumer' })

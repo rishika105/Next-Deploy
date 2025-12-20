@@ -28,10 +28,12 @@ const kafka = new Kafka({
     ca: [fs.readFileSync(path.join(__dirname, 'kafka.pem'), 'utf-8')]
   },
   sasl: {
-    username: 'avnadmin',
-    password: 'AVNS_hUsLGDLw76g5QVc5d9W',
+    username: process.env.KAFKA_USERNAME,
+    password: process.env.KAFKA_PASSWORD,
     mechanism: 'plain'
-  }
+  },
+  connectionTimeout: 30000,  // Increase timeout this was causing error again !********* 
+  requestTimeout: 30000
 });
 
 const producer = kafka.producer();
@@ -93,42 +95,42 @@ function buildAuthenticatedGitURL(url, token) {
   }
 
   const [, owner, repo] = match;
-  
+
   // Build authenticated URL: https://TOKEN@github.com/owner/repo.git
   const authURL = `https://${token}@github.com/${owner}/${repo}.git`;
   console.log(`✅ Built authenticated URL for ${owner}/${repo}`);
-  
+
   return authURL;
 }
 
 //clone in output dir
 async function cloneRepository() {
   const outDirPath = path.join(__dirname, "output");
-  
+
   // Build authenticated URL
   const cloneURL = buildAuthenticatedGitURL(GIT_REPOSITORY_URL, GITHUB_TOKEN);
-  
+
   console.log(`📥 Cloning repository...`);
   await publishLog(`Cloning repository: ${GIT_REPOSITORY_URL}`);
-  
+
   // Clone with authentication
-  const cloneCommand = BRANCH 
+  const cloneCommand = BRANCH
     ? `git clone --branch ${BRANCH} --single-branch ${cloneURL} ${outDirPath}`
     : `git clone ${cloneURL} ${outDirPath}`;
-  
+
   return new Promise((resolve, reject) => {
     exec(cloneCommand, (error, stdout, stderr) => {
       if (error) {
         console.error("❌ Clone failed:", error.message);
-        
+
         // Don't expose token in logs
         const sanitizedError = error.message.replace(GITHUB_TOKEN, '***TOKEN***');
         publishLog(`Clone failed: ${sanitizedError}`);
-        
+
         reject(error);
         return;
       }
-      
+
       console.log("✅ Repository cloned successfully");
       publishLog("Repository cloned successfully");
       resolve();
@@ -235,7 +237,7 @@ async function init() {
 
         console.log("Uploading", file);
         await publishLog(`Uploading: ${file}`);
-        
+
         const relativeKey = path.relative(distFolderPath, filePath);
 
         const command = new PutObjectCommand({
@@ -266,11 +268,11 @@ async function init() {
 
   } catch (err) {
     console.error("❌ Script crashed:", err);
-    
+
     // Sanitize error to not expose token
     const sanitizedError = err.message.replace(GITHUB_TOKEN, '***TOKEN***');
     await publishLog(`Error: ${sanitizedError}`);
-    
+
     await updateDeploymentStatus("FAIL");
     process.exit(1);
   }

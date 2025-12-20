@@ -1,12 +1,4 @@
-import { createClient } from "@clickhouse/client";
-
-//clickhouse db
-const clickhouseClient = createClient({
-    url: process.env.CLICKHOUSE_URL,
-    database: 'default',
-    username: 'avnadmin',
-    password: 'AVNS_Hsuxytl6jqGEFztgznL'
-})
+import { clickhouseClient } from "../libs/clickhouseClient.js";
 
 export const fetchLogs = async (req, res) => {
     try {
