@@ -28,27 +28,12 @@ export default function ProjectSettingsPage() {
 
   const [rootDirectory, setRootDirectory] = useState("");
   const [savingRootDir, setSavingRootDir] = useState(false);
+  const [isEditingRootDir, setIsEditingRootDir] = useState(false);
 
   // Editable env variables
   const [envVariables, setEnvVariables] = useState({});
   const [newEnvKey, setNewEnvKey] = useState("");
   const [newEnvValue, setNewEnvValue] = useState("");
-
-  useEffect(() => {
-    fetchProjectDetails();
-  }, [id]);
-
-  const fetchProjectDetails = async () => {
-    try {
-      const token = await getToken();
-      const response = await getProjectDetails(id, token);
-      setProject(response.project);
-      setEnvVariables(response.project.envVariables || {});
-      setRootDirectory(response.project.rootDirectory || "");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const addEnvVariable = () => {
     if (!newEnvKey.trim() || !newEnvValue.trim()) {
@@ -76,18 +61,34 @@ export default function ProjectSettingsPage() {
     setEnvVariables(newVars);
   };
 
+  //api calls
+  useEffect(() => {
+    fetchProjectDetails();
+  }, [id]);
+
+  const fetchProjectDetails = async () => {
+    try {
+      const token = await getToken();
+      const response = await getProjectDetails(id, token);
+      setProject(response.project);
+      setEnvVariables(response.project.envVariables || {});
+      setRootDirectory(response.project.rootDirectory || "");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveRootDirectory = async () => {
     setSavingRootDir(true);
+    const toastId = toast.loading("Loading...");
     try {
       const token = await getToken();
       await updateProjectSettings(id, { rootDirectory }, token);
       toast.success("Root directory updated successfully");
       setProject((prev) => ({ ...prev, rootDirectory }));
-    } catch (error) {
-      console.error("Update root directory error:", error);
-      toast.error("Failed to update root directory");
     } finally {
       setSavingRootDir(false);
+      toast.dismiss(toastId);
     }
   };
 
@@ -95,16 +96,13 @@ export default function ProjectSettingsPage() {
     setRedeploying(true);
     try {
       const token = await getToken();
-      const redeployResponse = await redeployProject(id, envVariables, token);
+      const redeployResponse = await redeployProject(token, envVariables, id);
 
       toast.success("Redeploying with new environment variables...");
 
       setTimeout(() => {
-        router.push(`/deployment/${redeployResponse.deploymentId}`);
+        router.push(`/deployments/${redeployResponse.deploymentId}`);
       }, 1500);
-    } catch (error) {
-      console.error("Redeploy error:", error);
-      toast.error("Failed to redeploy");
     } finally {
       setRedeploying(false);
     }
@@ -121,9 +119,7 @@ export default function ProjectSettingsPage() {
       setTimeout(() => {
         router.push("/overview");
       }, 1500);
-    } catch (error) {
-      console.error("Delete error:", error);
-      toast.error("Failed to delete project");
+    } finally {
       setDeleting(false);
     }
   };
@@ -132,8 +128,8 @@ export default function ProjectSettingsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-gray-700 border-t-gray-400 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading settings...</p>
+          <div className="w-16 h-16 border-4 border-[#5227FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading Settings...</p>
         </div>
       </div>
     );
@@ -238,9 +234,6 @@ export default function ProjectSettingsPage() {
                       </label>
                       <div className="bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 text-gray-300 flex items-center gap-2">
                         <span className="truncate">{project.subDomain}</span>
-                        <span className="text-xs text-gray-600 whitespace-nowrap">
-                          (Fixed)
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -261,20 +254,42 @@ export default function ProjectSettingsPage() {
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        value={rootDirectory}
-                        onChange={(e) => setRootDirectory(e.target.value)}
-                        placeholder="/"
-                        className="flex-1 bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 text-gray-300 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gray-700"
-                      />
-                      <button
-                        onClick={handleSaveRootDirectory}
-                        disabled={
-                          savingRootDir ||
-                          rootDirectory === project.rootDirectory
+                        value={
+                          rootDirectory === "" && !isEditingRootDir
+                            ? "/"
+                            : rootDirectory
                         }
-                        className="px-5 py-3 bg-gray-900/30 hover:bg-gray-800 border border-gray-800 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        disabled={!isEditingRootDir}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          // If user types "/", store "" for backend
+                          if (value === "/") {
+                            setRootDirectory("");
+                          } else {
+                            setRootDirectory(value);
+                          }
+                        }}
+                        placeholder="/ (root), client, frontend, src, etc."
+                        className="flex-1 bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 text-gray-300 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gray-700 disabled:opacity-60"
+                      />
+
+                      <button
+                        onClick={() => {
+                          if (isEditingRootDir) {
+                            handleSaveRootDirectory();
+                          } else {
+                            setIsEditingRootDir(true);
+                          }
+                        }}
+                        disabled={savingRootDir}
+                        className="px-5 py-3 bg-gray-900/30 hover:bg-gray-900 hover:text-white border border-gray-800 rounded-lg font-medium transition-all disabled:opacity-50"
                       >
-                        {savingRootDir ? "Saving..." : "Update"}
+                        {savingRootDir
+                          ? "Saving..."
+                          : isEditingRootDir
+                          ? "Update"
+                          : "Edit"}
                       </button>
                     </div>
                     <p className="text-xs text-gray-600 mt-2">
@@ -354,7 +369,7 @@ export default function ProjectSettingsPage() {
                     <button
                       type="button"
                       onClick={addEnvVariable}
-                      className="px-5 py-2.5 bg-white text-black hover:bg-gray-200 rounded-lg transition-colors font-medium whitespace-nowrap"
+                      className="px-5 py-2.5 text-black bg-gray-300 hover:bg-gray-200 rounded-lg transition-colors font-medium whitespace-nowrap"
                     >
                       + Add
                     </button>
@@ -381,7 +396,7 @@ export default function ProjectSettingsPage() {
                         <button
                           type="button"
                           onClick={() => removeEnvVariable(key)}
-                          className="ml-4 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-all px-3 py-1 text-sm font-medium"
+                          className="ml-4 text-red-400 transition-all px-3 py-1 text-sm font-medium"
                         >
                           Remove
                         </button>
@@ -418,7 +433,7 @@ export default function ProjectSettingsPage() {
                   >
                     {redeploying ? (
                       <>
-                        <span className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                        <span className="w-5 h-5 rounded-full animate-spin"></span>
                         Redeploying...
                       </>
                     ) : (

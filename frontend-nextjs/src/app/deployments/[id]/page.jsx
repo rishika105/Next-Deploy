@@ -20,29 +20,7 @@ export default function DeploymentDetailPage() {
   const [logsLoading, setLogsLoading] = useState(true);
   const [isPolling, setIsPolling] = useState(true);
   const pollingIntervalRef = useRef(null);
-  const logsEndRef = useRef(null);
-  const autoScrollRef = useRef(true);
-
   const FINAL_STATUSES = ["READY", "FAIL"];
-
-  // Scroll to bottom function
-  const scrollToBottom = useCallback(() => {
-    if (logsEndRef.current && autoScrollRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, []);
-
-  // Handle scroll events in the modal
-  const handleLogsScroll = useCallback((e) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-
-    if (isAtBottom) {
-      autoScrollRef.current = true;
-    } else {
-      autoScrollRef.current = false;
-    }
-  }, []);
 
   useEffect(() => {
     fetchDeploymentDetails();
@@ -106,20 +84,6 @@ export default function DeploymentDetailPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const handleOpenLogsModal = () => {
-    setShowLogsModal(true);
-    autoScrollRef.current = true;
-  };
-
-  const handleCloseLogsModal = () => {
-    setShowLogsModal(false);
-  };
-
-  const handleResumeAutoScroll = () => {
-    autoScrollRef.current = true;
-    scrollToBottom();
   };
 
   if (loading) {

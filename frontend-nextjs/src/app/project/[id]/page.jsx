@@ -66,8 +66,8 @@ export default function ProjectDetailPage() {
     const token = await getToken();
     const toastId = toast.loading("Loading...");
     try {
-      const response = await redeployProject(token, projectId);
-      console.log("REDEPLOY RESPONSE ", response);
+      const response = await redeployProject(token, null,  projectId);
+     // console.log("REDEPLOY RESPONSE ", response);
       toast.success("Redeploying started!");
       const id = response.deploymentId;
       router.push(`/deployments/${id}`);

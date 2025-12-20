@@ -7,6 +7,7 @@ import Footer from "../components/Footer";
 import { getProjects, redeployProject } from "@/services/projectService";
 import { useRouter } from "next/navigation";
 import { EllipsisVertical } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function Overview() {
   const { getToken } = useAuth();
@@ -64,7 +65,7 @@ export default function Overview() {
     const token = await getToken();
     const toastId = toast.loading("Loading...");
     try {
-      const response = await redeployProject(token, projectId);
+      const response = await redeployProject(token, null, projectId);
       console.log("REDEPLOY RESPONSE ", response);
       toast.success("Redeploying started!");
       const id = response.deploymentId;

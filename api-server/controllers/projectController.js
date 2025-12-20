@@ -377,7 +377,7 @@ export const createProject = async (req, res, ecsClient) => {
 // PROJECT MANAGEMENT
 // ============================================
 
-export const getProjects = async (req, res) => {
+export const getAllProjects = async (req, res) => {
   try {
     const userId = req.auth.userId;
     if (!userId) {
@@ -509,6 +509,49 @@ export const redeployProject = async (req, res, ecsClient) => {
     return res.status(500).json({
       success: false,
       message: "Failed to redeploy project"
+    });
+  }
+};
+
+export const updateProject = async (req, res) => {
+  try {
+    const userId = req.auth.userId;
+    const { projectId } = req.params;
+    const { rootDirectory } = req.body; //for now only root directory
+
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, userId }
+    });
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found"
+      });
+    }
+
+    // Delete deployments first
+    const updatedProject = await prisma.project.update({
+      where: {
+        id: projectId
+      },
+      data: {
+        rootDirectory: rootDirectory,
+      },
+    })
+
+    // console.log(updatedProject);
+
+    return res.status(200).json({
+      success: true,
+      updatedProject,
+      message: "Project updated successfully"
+    });
+  } catch (error) {
+    console.error("Update project error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update project"
     });
   }
 };

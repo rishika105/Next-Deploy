@@ -4,8 +4,45 @@ import { dmmfToRuntimeDataModel } from "@prisma/client/runtime/library";
 const prisma = new PrismaClient()
 
 
+
+//get all deployments 
+export const getAllDeployments = async (req, res) => {
+  try {
+    const id = req.auth.userId;
+    if (!id) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    const deployments = await prisma.deployment.findMany({
+      where: { userId: id },
+      include: { project: true },
+      orderBy: [
+        { updatedAt: "desc" },
+        { createdAt: "desc" }
+      ]
+    });
+
+    if (deployments.length === 0)
+      return res.status(200).json([]);
+
+    return res.status(200).json({
+      success: true,
+      deployments
+    });
+  } catch (error) {
+    console.log("Get deployments error: ", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error getting deployments"
+    });
+  }
+};
+
 //check deployment status
-export const checkDeploymentStatus = async (req, res) => {
+export const getDeploymentDetails = async (req, res) => {
   try {
     const { deploymentId } = req.params;
 
@@ -43,42 +80,6 @@ export const checkDeploymentStatus = async (req, res) => {
     })
   }
 }
-
-//get all deployments 
-export const getDeployments = async (req, res) => {
-  try {
-    const id = req.auth.userId;
-    if (!id) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    const deployments = await prisma.deployment.findMany({
-      where: { userId: id },
-      include: { project: true },
-      orderBy: [
-        { updatedAt: "desc" },
-        { createdAt: "desc" }
-      ]
-    });
-
-    if (deployments.length === 0)
-      return res.status(200).json([]);
-
-    return res.status(200).json({
-      success: true,
-      deployments
-    });
-  } catch (error) {
-    console.log("Get deployments error: ", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error getting deployments"
-    });
-  }
-};
 
 
 //get deployments by project id

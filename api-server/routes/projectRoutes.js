@@ -2,7 +2,7 @@ import express from "express";
 import { ClerkExpressRequireAuth } from "@clerk/clerk-sdk-node";
 import {
   createProject,
-  getProjects,
+  getAllProjects,
   getProjectById,
   redeployProject,
   deleteProject,
@@ -10,7 +10,8 @@ import {
   githubCallback,
   disconnectGitHub,
   getGitHubStatus,
-  getUserRepositories, 
+  getUserRepositories,
+  updateProject, 
 } from "../controllers/projectController.js";
 
 export default function projectRoutes(ecsClient) {
@@ -27,11 +28,12 @@ export default function projectRoutes(ecsClient) {
   router.post("/deploy", ClerkExpressRequireAuth(), (req, res) =>
     createProject(req, res, ecsClient)
   );
-  router.get("", ClerkExpressRequireAuth(), getProjects);
+  router.get("", ClerkExpressRequireAuth(), getAllProjects);
   router.get("/:projectId", ClerkExpressRequireAuth(), getProjectById);
   router.post("/:projectId/redeploy", ClerkExpressRequireAuth(), (req, res) =>
     redeployProject(req, res, ecsClient)
   );
+  router.patch("/:projectId", ClerkExpressRequireAuth(), updateProject);
   router.delete("/:projectId", ClerkExpressRequireAuth(), deleteProject);
 
   return router;
