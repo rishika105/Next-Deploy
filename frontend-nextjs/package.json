@@ -13,6 +13,7 @@
     "@clerk/themes": "^2.4.40",
     "@headlessui/react": "^2.2.9",
     "axios": "^1.12.2",
+    "copy-to-clipboard": "^3.3.3",
     "firebase": "^12.4.0",
     "gsap": "^3.13.0",
     "lucide-react": "^0.556.0",

@@ -2,13 +2,17 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useParams } from "next/navigation";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Footer from "@/app/components/Footer";
 import {
   getDeploymentDetails,
   getDeploymentLogs,
 } from "@/services/deployService";
+import { MessageSquareShare } from "lucide-react";
+import copy from "copy-to-clipboard";
+import toast from "react-hot-toast";
+import { redeployProject } from "@/services/projectService";
 
 export default function DeploymentDetailPage() {
   const { id } = useParams();
@@ -19,34 +23,58 @@ export default function DeploymentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [logsLoading, setLogsLoading] = useState(true);
   const [isPolling, setIsPolling] = useState(true);
+  const [autoScroll, setAutoScroll] = useState(true);
   const pollingIntervalRef = useRef(null);
+  const logsEndRef = useRef(null);
+  const logsContainerRef = useRef(null);
   const FINAL_STATUSES = ["READY", "FAIL"];
 
+  // Auto-scroll to bottom when new logs arrive
+  useEffect(() => {
+    if (autoScroll && logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [logs, autoScroll]);
+
+  // Detect manual scrolling to disable auto-scroll
+  const handleScroll = () => {
+    if (!logsContainerRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = logsContainerRef.current;
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+
+    setAutoScroll(isAtBottom);
+  };
+
+  //API CALLS
   useEffect(() => {
     fetchDeploymentDetails();
     fetchLogs();
 
-    // Poll every 2 sec
+    // Poll every 3 seconds (increased from 2 for better stability)
     pollingIntervalRef.current = setInterval(() => {
-      if (isPolling) {
-        fetchDeploymentDetails();
-        fetchLogs();
-      }
-    }, 2000);
+      fetchDeploymentDetails();
+      fetchLogs();
+    }, 3000);
 
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
     };
-  }, [id, isPolling]);
+  }, [id]);
 
+  // Stop polling when deployment reaches final status
   useEffect(() => {
     if (deployment && FINAL_STATUSES.includes(deployment.status)) {
-      setIsPolling(false);
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
+      // Wait 10 seconds after final status to catch any trailing logs
+      setTimeout(() => {
+        setIsPolling(false);
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      }, 10000);
     }
   }, [deployment]);
 
@@ -55,6 +83,8 @@ export default function DeploymentDetailPage() {
       const token = await getToken();
       const response = await getDeploymentDetails(id, token);
       setDeployment(response);
+    } catch (error) {
+      console.error("Error fetching deployment details:", error);
     } finally {
       setLoading(false);
     }
@@ -71,8 +101,24 @@ export default function DeploymentDetailPage() {
       );
 
       setLogs(sorted);
+    } catch (error) {
+      console.error("Error fetching logs:", error);
     } finally {
       setLogsLoading(false);
+    }
+  };
+
+  const handleRedeploy = async (projectId) => {
+    const token = await getToken();
+    const toastId = toast.loading("Loading...");
+    try {
+      const response = await redeployProject(token, null, projectId);
+      //console.log("REDEPLOY RESPONSE ", response);
+      toast.success("Redeploying started!");
+      const id = response.deploymentId;
+      router.push(`/deployments/${id}`);
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
@@ -112,7 +158,7 @@ export default function DeploymentDetailPage() {
 
   return (
     <>
-      <div className="min-h-screen  bg-black mx-auto text-white mb-20">
+      <div className="min-h-screen bg-black mx-auto text-white mb-20">
         <div className="container mx-auto px-4 py-8 w-[90%]">
           {/* Header */}
           <div className="mb-8">
@@ -127,12 +173,48 @@ export default function DeploymentDetailPage() {
             <div className="flex justify-between">
               <h1 className="text-2xl font-bold">Deployment Details</h1>
 
-              <Link
-                href={`/project/${deployment.projectId}`}
-                className="bg-gradient-to-r text-black from-[#6755ae] to-[#FF9FFC] px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg shadow-[#5227FF]/20"
-              >
-                Go to Project →
-              </Link>
+              <div className="flex gap-4">
+                {/* Show redeploy button if fail otherwise share on ready */}
+                {deployment.status === "READY" && (
+                  <button
+                    onClick={() => {
+                      copy(deployment.url);
+                      toast.success("Copied to clipboard");
+                    }}
+                    className="px-5 py-2.5 border border-gray-800 bg-gray-900/30 rounded-lg font-medium transition-all flex items-center gap-2"
+                  >
+                    <MessageSquareShare className="size-4" /> Share
+                  </button>
+                )}
+                {deployment.status === "FAIL" && (
+                  <button
+                    onClick={() => handleRedeploy(deployment.projectId)}
+                    className="px-5 py-2.5 border border-gray-800 bg-gray-900/30 rounded-lg font-medium transition-all flex items-center gap-2"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>{" "}
+                    Redeploy
+                  </button>
+                )}
+
+                <Link
+                  href={`/project/${deployment.projectId}`}
+                  className="bg-gradient-to-r text-black from-[#6755ae] to-[#FF9FFC] px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg shadow-[#5227FF]/20"
+                >
+                  Go to Project →
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -224,6 +306,15 @@ export default function DeploymentDetailPage() {
                     setIsPolling(true);
                     fetchDeploymentDetails();
                     fetchLogs();
+
+                    // Restart polling
+                    if (pollingIntervalRef.current) {
+                      clearInterval(pollingIntervalRef.current);
+                    }
+                    pollingIntervalRef.current = setInterval(() => {
+                      fetchDeploymentDetails();
+                      fetchLogs();
+                    }, 3000);
                   }}
                   className="text-sm px-4 py-2 bg-[#5227FF]/20 hover:bg-[#5227FF]/30 text-[#FF9FFC] rounded-lg transition-colors"
                 >
@@ -233,15 +324,27 @@ export default function DeploymentDetailPage() {
             </div>
           </div>
 
-          {/* Logs Preview Section */}
+          {/* Logs Section */}
           <div className="bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl overflow-hidden">
             <div className="bg-gray-900/50 border-b border-gray-700 px-6 py-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold">Build Logs</h3>
                 <div className="flex items-center gap-4">
+                  <h3 className="text-lg font-bold">Build Logs</h3>
                   <span className="text-sm text-gray-400">
                     {logs.length} entries
                   </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setAutoScroll(!autoScroll)}
+                    className={`text-xs px-3 py-1 rounded-lg transition-colors border ${
+                      autoScroll
+                        ? "bg-[#5227FF]/20 border-[#5227FF] text-[#FF9FFC]"
+                        : "bg-gray-800/60 border-gray-700 text-gray-400"
+                    }`}
+                  >
+                    {autoScroll ? "Auto-scroll ON" : "Auto-scroll OFF"}
+                  </button>
                   <button
                     onClick={() => {
                       fetchLogs();
@@ -251,12 +354,28 @@ export default function DeploymentDetailPage() {
                   >
                     Refresh
                   </button>
+                  <button
+                    onClick={() => {
+                      setAutoScroll(true);
+                      logsEndRef.current?.scrollIntoView({
+                        behavior: "smooth",
+                      });
+                    }}
+                    className="text-sm px-3 py-1 bg-gray-800/60 hover:bg-gray-700 border border-gray-700 rounded-lg transition-colors"
+                  >
+                    ↓ Jump to Bottom
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Logs Preview - Show last 10 logs */}
-            <div className="h-[300px] overflow-y-auto p-6 font-mono text-sm bg-black/30">
+            {/* Logs Container - Fixed height with proper scrolling */}
+            <div
+              ref={logsContainerRef}
+              onScroll={handleScroll}
+              className="h-[500px] overflow-y-auto p-6 font-mono text-sm bg-black/30"
+              style={{ scrollBehavior: "smooth" }}
+            >
               {logsLoading && logs.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
@@ -272,32 +391,35 @@ export default function DeploymentDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {logs.slice(-10).map((log, index) => (
+                  {logs.map((log, index) => (
                     <div
-                      key={index}
+                      key={`${log.timestamp}-${index}`}
                       className={`p-2 rounded ${
-                        log.log.startsWith("ERROR")
+                        log.log.startsWith("ERROR") || log.log.includes("error")
                           ? "bg-red-500/10 border-l-4 border-red-500"
-                          : log.log.startsWith("WARN")
+                          : log.log.startsWith("WARN") ||
+                            log.log.includes("warning")
                           ? "bg-yellow-500/10 border-l-4 border-yellow-500"
                           : log.log.includes("Uploading") ||
-                            log.log.includes("✅")
+                            log.log.includes("✅") ||
+                            log.log.includes("success")
                           ? "bg-green-500/10 border-l-4 border-green-500"
                           : "hover:bg-gray-800/50 border-l-4 border-gray-700"
                       }`}
                     >
-                      <div className="flex">
-                        <span className="text-gray-500 mr-4 w-16 flex-shrink-0">
+                      <div className="flex gap-4">
+                        <span className="text-gray-500 w-20 flex-shrink-0 text-xs">
                           {new Date(log.timestamp).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
                             second: "2-digit",
                           })}
                         </span>
-                        <span className="flex-1 truncate">{log.log}</span>
+                        <span className="flex-1 break-words">{log.log}</span>
                       </div>
                     </div>
                   ))}
+                  <div ref={logsEndRef} />
                 </div>
               )}
             </div>

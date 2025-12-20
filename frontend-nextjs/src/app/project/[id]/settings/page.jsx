@@ -72,7 +72,7 @@ export default function ProjectSettingsPage() {
       const response = await getProjectDetails(id, token);
       setProject(response.project);
       setEnvVariables(response.project.envVariables || {});
-      setRootDirectory(response.project.rootDirectory || "");
+      setRootDirectory(response.project.rootDirectory || "/");
     } finally {
       setLoading(false);
     }
@@ -83,9 +83,17 @@ export default function ProjectSettingsPage() {
     const toastId = toast.loading("Loading...");
     try {
       const token = await getToken();
-      await updateProjectSettings(id, { rootDirectory }, token);
+      const normalizedRootDir =
+        rootDirectory.trim() === "/" ? "" : rootDirectory.trim();
+
+      await updateProjectSettings(
+        id,
+        { rootDirectory: normalizedRootDir },
+        token
+      );
       toast.success("Root directory updated successfully");
       setProject((prev) => ({ ...prev, rootDirectory }));
+      setIsEditingRootDir(false);
     } finally {
       setSavingRootDir(false);
       toast.dismiss(toastId);
@@ -254,24 +262,11 @@ export default function ProjectSettingsPage() {
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        value={
-                          rootDirectory === "" && !isEditingRootDir
-                            ? "/"
-                            : rootDirectory
-                        }
+                        value={rootDirectory}
                         disabled={!isEditingRootDir}
-                        onChange={(e) => {
-                          const value = e.target.value;
-
-                          // If user types "/", store "" for backend
-                          if (value === "/") {
-                            setRootDirectory("");
-                          } else {
-                            setRootDirectory(value);
-                          }
-                        }}
+                        onChange={(e) => setRootDirectory(e.target.value)}
                         placeholder="/ (root), client, frontend, src, etc."
-                        className="flex-1 bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 text-gray-300 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gray-700 disabled:opacity-60"
+                        className="flex-1 bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 text-gray-300 font-mono text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                       />
 
                       <button

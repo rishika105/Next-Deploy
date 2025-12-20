@@ -454,6 +454,32 @@ export const getProjectById = async (req, res) => {
   }
 };
 
+export const searchProject = async (req, res) => {
+  try {
+    const { searchTerm } = req.query;
+    const projects = await prisma.post.findMany({
+      where: {
+        title: {
+          contains: searchTerm,
+          mode: 'insensitive', // makes the search case-insensitive in PostgreSQL
+        },
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      projects
+    });
+  } catch (error) {
+    console.error("Search project error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error searching project"
+    });
+  }
+};
+
+
 export const redeployProject = async (req, res, ecsClient) => {
   const userId = req.auth.userId;
   const { projectId } = req.params;

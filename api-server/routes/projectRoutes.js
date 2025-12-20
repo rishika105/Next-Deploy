@@ -11,7 +11,8 @@ import {
   disconnectGitHub,
   getGitHubStatus,
   getUserRepositories,
-  updateProject, 
+  updateProject,
+  searchProject, 
 } from "../controllers/projectController.js";
 
 export default function projectRoutes(ecsClient) {
@@ -30,6 +31,7 @@ export default function projectRoutes(ecsClient) {
   );
   router.get("", ClerkExpressRequireAuth(), getAllProjects);
   router.get("/:projectId", ClerkExpressRequireAuth(), getProjectById);
+  router.post("?search=searchTerm", ClerkExpressRequireAuth(), searchProject())
   router.post("/:projectId/redeploy", ClerkExpressRequireAuth(), (req, res) =>
     redeployProject(req, res, ecsClient)
   );

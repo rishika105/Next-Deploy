@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import Footer from "../components/Footer";
 import { getProjects, redeployProject } from "@/services/projectService";
 import { useRouter } from "next/navigation";
-import { EllipsisVertical } from "lucide-react";
+import { EllipsisVertical, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function Overview() {
@@ -61,19 +61,9 @@ export default function Overview() {
     fetchAllProjects();
   }, []);
 
-  const handleRedeploy = async (projectId) => {
-    const token = await getToken();
-    const toastId = toast.loading("Loading...");
-    try {
-      const response = await redeployProject(token, null, projectId);
-      console.log("REDEPLOY RESPONSE ", response);
-      toast.success("Redeploying started!");
-      const id = response.deploymentId;
-      router.push(`/deployments/${id}`);
-    } finally {
-      toast.dismiss(toastId);
-    }
-  };
+  const handleSearch = () => {
+
+  }
 
   //format date
   const formatDate = (dateString) => {
@@ -97,6 +87,14 @@ export default function Overview() {
                 </span>
               </h1>
             </div>
+            
+            {/* Search projects */}
+            <input
+              className="bg-black py-3 px-4 w-[70%] rounded-md border border-gray-700 hover:border-gray-600"
+              placeholder="🔍︎ Search projects"
+              onClick={(e) => handleSearch(e)}
+            />
+
             <Link
               href="/deploy"
               className="bg-gradient-to-r text-black from-[#6755ae] to-[#FF9FFC] px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg shadow-[#5227FF]/20"
@@ -155,7 +153,7 @@ export default function Overview() {
                         </div>
                       </div>
 
-                      {/* Settings and redeploy modal */}
+                      {/* Settings modal */}
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
@@ -185,16 +183,6 @@ export default function Overview() {
                             }}
                           >
                             Settings
-                          </button>
-
-                          <button
-                            className="w-full text-left hover:bg-gray-900 cursor-pointer p-2 rounded"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRedeploy(project.id);
-                            }}
-                          >
-                            Redeploy
                           </button>
                         </div>
                       )}
