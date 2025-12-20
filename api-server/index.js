@@ -11,8 +11,6 @@ import { clickhouseClient } from "./libs/clickhouseClient.js";
 import dotenv from "dotenv";
 dotenv.config({ path: ".env", override: true });
 
-
-
 const app = express();
 app.use(express.json());
 app.use(cors()); //allow all origins
@@ -24,7 +22,6 @@ const prisma = new PrismaClient();
 const ecsClient = new ECSClient({
   region: "us-east-1"
 });
-
 
 
 //consume logs produced in kafka topic created in script.js

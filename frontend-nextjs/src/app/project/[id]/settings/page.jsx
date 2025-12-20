@@ -5,11 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import toast, { Toaster } from "react-hot-toast";
-import Footer from "@/app/components/Footer";
-import axios from "axios";
-import { getProjectDetails } from "@/services/projectService";
-
-const API_URL = "http://localhost:9000/api";
+import Footer from "@/app/components/Footer.jsx";
+import {
+  getProjectDetails,
+  redeployProject,
+  deleteProject,
+  updateProjectSettings,
+} from "@/services/projectService";
 
 export default function ProjectSettingsPage() {
   const { id } = useParams();
@@ -18,17 +20,20 @@ export default function ProjectSettingsPage() {
 
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [redeploying, setRedeploying] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const [cicdEnabled, setCicdEnabled] = useState(false);
+
+  const [rootDirectory, setRootDirectory] = useState("");
+  const [savingRootDir, setSavingRootDir] = useState(false);
 
   // Editable env variables
   const [envVariables, setEnvVariables] = useState({});
   const [newEnvKey, setNewEnvKey] = useState("");
   const [newEnvValue, setNewEnvValue] = useState("");
 
-  //api calls
   useEffect(() => {
     fetchProjectDetails();
   }, [id]);
@@ -38,6 +43,8 @@ export default function ProjectSettingsPage() {
       const token = await getToken();
       const response = await getProjectDetails(id, token);
       setProject(response.project);
+      setEnvVariables(response.project.envVariables || {});
+      setRootDirectory(response.project.rootDirectory || "");
     } finally {
       setLoading(false);
     }
@@ -61,7 +68,6 @@ export default function ProjectSettingsPage() {
 
     setNewEnvKey("");
     setNewEnvValue("");
-    // toast.success("Variable added (not saved yet)");
   };
 
   const removeEnvVariable = (key) => {
@@ -70,23 +76,31 @@ export default function ProjectSettingsPage() {
     setEnvVariables(newVars);
   };
 
+  const handleSaveRootDirectory = async () => {
+    setSavingRootDir(true);
+    try {
+      const token = await getToken();
+      await updateProjectSettings(id, { rootDirectory }, token);
+      toast.success("Root directory updated successfully");
+      setProject((prev) => ({ ...prev, rootDirectory }));
+    } catch (error) {
+      console.error("Update root directory error:", error);
+      toast.error("Failed to update root directory");
+    } finally {
+      setSavingRootDir(false);
+    }
+  };
+
   const handleSaveAndRedeploy = async () => {
     setRedeploying(true);
     try {
       const token = await getToken();
-      // Save changes
-      // Trigger redeploy
-      const redeployResponse = await axios.post(
-        `${API_URL}/project/${id}/redeploy`,
-        { envVariables },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const redeployResponse = await redeployProject(id, envVariables, token);
 
       toast.success("Redeploying with new environment variables...");
 
-      // Redirect to deployment logs
       setTimeout(() => {
-        router.push(`/deployment/${redeployResponse.data.deploymentId}`);
+        router.push(`/deployment/${redeployResponse.deploymentId}`);
       }, 1500);
     } catch (error) {
       console.error("Redeploy error:", error);
@@ -100,9 +114,7 @@ export default function ProjectSettingsPage() {
     setDeleting(true);
     try {
       const token = await getToken();
-      await axios.delete(`${API_URL}/project/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await deleteProject(id, token);
 
       toast.success("Project deleted successfully");
 
@@ -118,9 +130,9 @@ export default function ProjectSettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#5227FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-gray-700 border-t-gray-400 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-400">Loading settings...</p>
         </div>
       </div>
@@ -129,10 +141,13 @@ export default function ProjectSettingsPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Project not found</h2>
-          <Link href="/overview" className="text-[#FF9FFC] underline">
+          <Link
+            href="/overview"
+            className="text-gray-400 underline hover:text-white"
+          >
             Return to projects
           </Link>
         </div>
@@ -142,235 +157,485 @@ export default function ProjectSettingsPage() {
 
   return (
     <>
-
-      <div className="min-h-screen w-[90%] mx-auto text-white mb-20">
-        <div className="container mx-auto px-4 py-8">
-          {/* Header */}
+      <div className="min-h-screen bg-black text-white">
+        <div className="container mx-auto px-6 py-8 w-[90%]">
           <div className="mb-8">
-            <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
-              <Link href="/overview" className="hover:text-white">
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+              <Link
+                href="/overview"
+                className="hover:text-gray-300 transition-colors"
+              >
                 Projects
               </Link>
-              <span>→</span>
-              <Link href={`/project/${id}`} className="hover:text-white">
+              <span>/</span>
+              <Link
+                href={`/project/${id}`}
+                className="hover:text-gray-300 transition-colors"
+              >
                 {project.name}
               </Link>
-              <span>→</span>
-              <span className="text-white">Settings</span>
+              <span>/</span>
+              <span className="text-white font-medium">Settings</span>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold mb-2">Project Settings</h1>
-                <p className="text-gray-400">
-                  Manage environment variables and project configuration
+                <h1 className="text-2xl font-bold mb-3 text-white">
+                  Project Settings
+                </h1>
+                <p className="text-gray-400 text-lg">
+                  Configure your project deployment and environment
                 </p>
               </div>
 
               <Link
                 href={`/project/${id}`}
-                className="px-6 py-3 border border-gray-700 hover:bg-gray-800/50 rounded-xl font-semibold transition-all"
+                className="px-5 py-2.5 border border-gray-800 hover:bg-gray-900/30 rounded-lg font-medium transition-all flex items-center gap-2"
               >
                 ← Back to Project
               </Link>
             </div>
           </div>
 
-          <div className="max-w-4xl space-y-6">
-            {/* Project Information (Read-only) */}
-            <div className="bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl p-6">
-              <h2 className="text-xl font-bold mb-6">Project Information</h2>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">
-                    Project Name
-                  </label>
-                  <input
-                    type="text"
-                    value={project.name}
-                    disabled
-                    className="w-full bg-gray-800/30 border border-gray-700 rounded-lg px-4 py-3 text-gray-400 cursor-not-allowed"
-                  />
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Left Column - Main Settings */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Project Information */}
+              <div className="bg-gray-900/30/30 border border-gray-800 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-8 h-8 bg-gray-900/30 rounded-lg flex items-center justify-center">
+                    <svg
+                      className="w-4 h-4 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold">Project Information</h2>
                 </div>
 
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">
-                    Git Repository URL
-                  </label>
-                  <input
-                    type="text"
-                    value={project.gitURL}
-                    disabled
-                    className="w-full bg-gray-800/30 border border-gray-700 rounded-lg px-4 py-3 text-gray-400 cursor-not-allowed"
-                  />
-                </div>
+                <div className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">
+                        Project Name
+                      </label>
+                      <div className="bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 text-gray-300">
+                        {project.name}
+                      </div>
+                    </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">
-                      Subdomain
-                    </label>
-                    <input
-                      type="text"
-                      value={project.subDomain}
-                      disabled
-                      className="w-full bg-gray-800/30 border border-gray-700 rounded-lg px-4 py-3 text-gray-400 cursor-not-allowed"
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">
+                        Subdomain
+                      </label>
+                      <div className="bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 text-gray-300 flex items-center gap-2">
+                        <span className="truncate">{project.subDomain}</span>
+                        <span className="text-xs text-gray-600 whitespace-nowrap">
+                          (Fixed)
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">
-                      Framework
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Git Repository
                     </label>
-                    <input
-                      type="text"
-                      value={project.framework}
-                      disabled
-                      className="w-full bg-gray-800/30 border border-gray-700 rounded-lg px-4 py-3 text-gray-400 cursor-not-allowed"
-                    />
+                    <div className="bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 text-gray-300 font-mono text-sm break-all">
+                      {project.gitURL}
+                    </div>
                   </div>
-                </div>
 
-                {project.rootDirectory && (
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
                       Root Directory
                     </label>
-                    <input
-                      type="text"
-                      value={project.rootDirectory}
-                      disabled
-                      className="w-full bg-gray-800/30 border border-gray-700 rounded-lg px-4 py-3 text-gray-400 cursor-not-allowed"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Environment Variables (Editable) */}
-            <div className="bg-gray-900/30 backdrop-blur-sm border border-gray-700 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-bold">Environment Variables</h2>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Changes require redeployment to take effect
-                  </p>
-                </div>
-                <span className="text-sm text-yellow-400 flex items-center gap-2">
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Redeploy required
-                </span>
-              </div>
-
-              {/* Add New Variable */}
-              <div className="space-y-4 mb-6">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newEnvKey}
-                    onChange={(e) => setNewEnvKey(e.target.value)}
-                    placeholder="VARIABLE_NAME"
-                    className="flex-1 bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#5227FF] font-mono text-sm"
-                  />
-                  <input
-                    type="text"
-                    value={newEnvValue}
-                    onChange={(e) => setNewEnvValue(e.target.value)}
-                    placeholder="value"
-                    className="flex-1 bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#5227FF] font-mono text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={addEnvVariable}
-                    className="px-6 py-3 bg-[#5227FF]/20 hover:bg-[#5227FF]/30 border border-[#5227FF] rounded-lg transition-colors font-semibold"
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-
-              {/* Existing Variables */}
-              {Object.keys(envVariables).length > 0 ? (
-                <div className="space-y-2">
-                  {Object.entries(envVariables).map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="flex items-center justify-between bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3"
-                    >
-                      <div className="font-mono text-sm flex-1">
-                        <span className="text-blue-400">{key}</span>
-                        <span className="text-gray-500 mx-2">=</span>
-                        <span className="text-green-400">{value}</span>
-                      </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={rootDirectory}
+                        onChange={(e) => setRootDirectory(e.target.value)}
+                        placeholder="/"
+                        className="flex-1 bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 text-gray-300 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gray-700"
+                      />
                       <button
-                        type="button"
-                        onClick={() => removeEnvVariable(key)}
-                        className="text-red-400 hover:text-red-300 transition-colors px-3 py-1 text-sm"
+                        onClick={handleSaveRootDirectory}
+                        disabled={
+                          savingRootDir ||
+                          rootDirectory === project.rootDirectory
+                        }
+                        className="px-5 py-3 bg-gray-900/30 hover:bg-gray-800 border border-gray-800 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                       >
-                        Remove
+                        {savingRootDir ? "Saving..." : "Update"}
                       </button>
                     </div>
-                  ))}
+                    <p className="text-xs text-gray-600 mt-2">
+                      Updates instantly, no redeployment needed
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-8 border-2 border-dashed border-gray-800 rounded-lg">
-                  <p className="text-gray-400">No environment variables set</p>
-                </div>
-              )}
+              </div>
 
-              {/* Save Actions */}
-              <div className="flex gap-4 mt-6 pt-6 border-t border-gray-700 justify-end">
-                <div className="flex justify-end">
+              {/* Environment Variables */}
+              <div className="bg-gray-900/30 border border-gray-800 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">
+                        Environment Variables
+                      </h2>
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        Manage configuration and secrets
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="text-xs font-medium text-yellow-500 flex items-center gap-1.5 ">
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Redeploy Required
+                  </span>
+                </div>
+
+                {/* Add New Variable */}
+                <div className="bg-gray-900/30 border border-gray-800 rounded-lg p-4 mb-4">
+                  <label className="block text-sm font-medium text-gray-400 mb-3">
+                    Add New Variable
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newEnvKey}
+                      onChange={(e) =>
+                        setNewEnvKey(e.target.value.toUpperCase())
+                      }
+                      placeholder="VARIABLE_NAME"
+                      className="flex-1 bg-black border border-gray-800 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-gray-700 font-mono text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={newEnvValue}
+                      onChange={(e) => setNewEnvValue(e.target.value)}
+                      placeholder="value"
+                      className="flex-1 bg-black border border-gray-800 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-gray-700 font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={addEnvVariable}
+                      className="px-5 py-2.5 bg-white text-black hover:bg-gray-200 rounded-lg transition-colors font-medium whitespace-nowrap"
+                    >
+                      + Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Existing Variables */}
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {Object.entries(envVariables).length > 0 ? (
+                    Object.entries(envVariables).map(([key, value]) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 group hover:border-gray-700 transition-colors"
+                      >
+                        <div className="font-mono text-sm flex-1 min-w-0">
+                          <span className="text-blue-400 font-semibold">
+                            {key}
+                          </span>
+                          <span className="text-gray-700 mx-2">=</span>
+                          <span className="text-green-400 truncate">
+                            {value}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeEnvVariable(key)}
+                          className="ml-4 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-all px-3 py-1 text-sm font-medium"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 border-2 border-dashed border-gray-900 rounded-lg">
+                      <svg
+                        className="w-12 h-12 text-gray-800 mx-auto mb-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                      <p className="text-gray-600 text-sm">
+                        No environment variables configured
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Save Button */}
+                <div className="flex justify-end mt-6 pt-6 border-t border-gray-900">
                   <button
                     onClick={handleSaveAndRedeploy}
                     disabled={redeploying}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r text-black from-[#6755ae] to-[#FF9FFC] rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg shadow-[#5227FF]/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="bg-gradient-to-r text-black from-[#6755ae] to-[#FF9FFC] px-4 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg shadow-[#5227FF]/20"
                   >
                     {redeploying ? (
-                      <span className="flex items-center justify-center gap-2">
+                      <>
                         <span className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
                         Redeploying...
-                      </span>
+                      </>
                     ) : (
-                      "Save & Redeploy"
+                      <div className="flex gap-2">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                        Save & Redeploy
+                      </div>
                     )}
                   </button>
                 </div>
               </div>
-            </div>
 
-            {/* Danger Zone */}
-            <div className="bg-red-500/5 backdrop-blur-sm border border-red-500/30 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-red-400 mb-4">
-                Danger Zone
-              </h2>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium mb-1">Delete this project</p>
-                  <p className="text-sm text-gray-400">
-                    Once deleted, all deployments and data will be permanently
-                    removed.
-                  </p>
+              <div className="bg-gray-900/30 border border-gray-800 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-8 h-8 bg-gray-900/30 rounded-lg flex items-center justify-center">
+                    <svg
+                      className="w-4 h-4 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">
+                      CI/CD & Automated Deployments
+                    </h2>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Automatically deploy on git push
+                    </p>
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => setShowDeleteModal(true)}
-                  className="px-6 py-3 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-400 rounded-xl font-semibold transition-all"
-                >
-                  Delete Project
-                </button>
+                <div className="flex items-center justify-between bg-gray-900/30 border border-gray-800 rounded-lg p-4">
+                  <div>
+                    <p className="font-medium mb-1">
+                      Enable Automated Deployments
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Trigger deployments automatically when you push to your
+                      repository
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => setCicdEnabled(!cicdEnabled)}
+                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                      cicdEnabled ? "bg-white" : "bg-gray-800"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full transition-transform ${
+                        cicdEnabled
+                          ? "translate-x-6 bg-black"
+                          : "translate-x-1 bg-gray-600"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {cicdEnabled && (
+                  <div className="mt-4 p-4 bg-gray-900/30 border border-gray-800 rounded-lg">
+                    <p className="text-sm text-gray-300 flex items-start gap-2">
+                      <svg
+                        className="w-5 h-5 flex-shrink-0 mt-0.5 text-gray-400"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span>
+                        CI/CD is enabled. Your project will automatically
+                        redeploy on git push events.
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Danger Zone */}
+              <div className="bg-red-950/20 border border-red-900/30 rounded-xl p-6 mb-16">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-8 h-8 bg-red-950/50 rounded-lg flex items-center justify-center">
+                    <svg
+                      className="w-4 h-4 text-red-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold text-red-500">
+                    Danger Zone
+                  </h2>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium mb-1">Delete this project</p>
+                    <p className="text-sm text-gray-500">
+                      Permanently remove this project and all deployments
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="px-5 py-2.5 bg-red-950/30 hover:bg-red-950/50 border border-red-900/50 text-red-500 rounded-lg font-medium transition-all"
+                  >
+                    Delete Project
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="bg-gray-900/30 border border-gray-800 rounded-xl p-6 sticky top-8">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-8 h-8 bg-gray-900/30 rounded-lg flex items-center justify-center">
+                    <svg
+                      className="w-4 h-4 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                      />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold">Build Configuration</h2>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Framework
+                    </label>
+                    <div className="bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 text-gray-300 flex items-center justify-between">
+                      <span>{project.framework || "Node.js"}</span>
+                      <span className="text-xs px-2 py-1 bg-gray-800 text-gray-500 rounded">
+                        Info
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-2">
+                      For reference, doesn't affect build
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Build Command
+                    </label>
+                    <div className="bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 font-mono text-sm text-gray-400">
+                      npm run build
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Install Command
+                    </label>
+                    <div className="bg-gray-900/30 border border-gray-800 rounded-lg px-4 py-3 font-mono text-sm text-gray-400">
+                      npm install
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-900">
+                    <div className="flex items-start gap-2 text-xs text-gray-600">
+                      <svg
+                        className="w-4 h-4 flex-shrink-0 mt-0.5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <p>
+                        Build commands are fixed. Used Npm mananger. Entry point
+                        is index.html for all frontend frameworks.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -379,12 +644,13 @@ export default function ProjectSettingsPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="bg-gray-900 border border-red-500/30 rounded-2xl p-8 max-w-md w-full">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-[#0b0b0b] p-6 shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-900/20 border border-red-900/30 flex items-center justify-center">
                 <svg
-                  className="w-8 h-8 text-red-400"
+                  className="w-6 h-6 text-red-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -397,34 +663,40 @@ export default function ProjectSettingsPage() {
                   />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold mb-2">Delete Project?</h3>
-              <p className="text-gray-400">
-                Are you sure you want to delete{" "}
-                <strong className="text-white">{project.name}</strong>? This
-                action cannot be undone.
-              </p>
+
+              <h3 className="text-xl font-semibold text-white">
+                Delete Project?
+              </h3>
             </div>
 
-            <div className="space-y-3">
+            {/* Description */}
+            <p className="text-sm text-gray-400 mb-6">
+              Are you sure you want to delete{" "}
+              <span className="text-white font-medium">{project.name}</span>?
+              This action cannot be undone.
+            </p>
+
+            {/* Actions */}
+            <div className="flex gap-3">
               <button
                 onClick={handleDeleteProject}
                 disabled={deleting}
-                className="w-full px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 rounded-xl bg-red-600/80 hover:bg-red-600 text-white font-medium py-2.5 transition-all disabled:opacity-50"
               >
                 {deleting ? (
                   <span className="flex items-center justify-center gap-2">
-                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    Deleting...
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting…
                   </span>
                 ) : (
-                  "Yes, Delete Project"
+                  "Delete"
                 )}
               </button>
 
               <button
                 onClick={() => setShowDeleteModal(false)}
                 disabled={deleting}
-                className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl font-semibold transition-all disabled:opacity-50"
+                className="flex-1 rounded-xl border border-gray-700 bg-gray-900/40 hover:bg-gray-800 text-gray-300 font-medium py-2.5 transition-all disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -432,6 +704,7 @@ export default function ProjectSettingsPage() {
           </div>
         </div>
       )}
+
       <Footer />
     </>
   );

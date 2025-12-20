@@ -36,7 +36,22 @@ export const redeployProject = async (token, projectId) => {
   const res = await api.post(
     `/project/${projectId}/redeploy`,
     {},
-    { headers: { Authorization: `Bearer ${token}`},
+    {
+      headers: { Authorization: `Bearer ${token}` },
     });
   return res.data;
 };
+
+export const deleteProject = async (projectId, token) => {
+  const res = await api.delete(`/project/${projectId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return res.data
+}
+
+export const updateProjectSettings = async (projectId, data, token) => {
+  const res = await api.patch(`/project/${projectId}`, data, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return res.data
+}

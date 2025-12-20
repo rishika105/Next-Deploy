@@ -36,7 +36,6 @@ export default function Deploy() {
 
   const frameworks = [
     { id: "react", name: "React", icon: "⚛️" },
-    { id: "next(static)", name: "Next.js", icon: "▲" },
     { id: "vue", name: "Vue", icon: "⚡" },
     { id: "angular", name: "Angular", icon: "🅰️" },
     { id: "svelte", name: "Svelte", icon: "🟧" },

@@ -130,8 +130,8 @@ export default function ProjectDetailPage() {
 
   return (
     <>
-      <div className="min-h-screen w-[90%] mx-auto text-white mb-20">
-        <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen bg-black  mx-auto text-white mb-20">
+        <div className="container mx-auto px-4 py-8 w-[90%]">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
@@ -159,7 +159,7 @@ export default function ProjectDetailPage() {
               <div className="flex gap-3">
                 <Link
                   href={`/project/${project.id}/settings`}
-                  className="px-6 py-3 bg-gray-800/50 hover:bg-gray-700 border border-gray-700 rounded-xl font-semibold transition-all flex items-center gap-2"
+                  className="px-5 py-2.5 border border-gray-800 hover:bg-gray-900/30 rounded-lg font-medium transition-all flex items-center gap-2"
                 >
                   <svg
                     className="w-5 h-5"
@@ -215,11 +215,9 @@ export default function ProjectDetailPage() {
             </div>
 
             {modal && (
-              <div
-                className="bg-black absolute w-fit right-4 top-4 z-20 text-sm p-2 border border-gray-800 rounded-md"
-              >
+              <div className="bg-black absolute w-fit right-4 top-4 z-20 text-sm p-2 border border-gray-800 rounded-md">
                 <button
-                  className="w-full text-left hover:bg-gray-900 cursor-pointer p-2 rounded"
+                  className="w-full text-left hover:bg-gray-900 p-2 rounded"
                   onClick={() => handleRedeploy(project.id)}
                 >
                   Redploy Latest Commit
@@ -291,26 +289,6 @@ export default function ProjectDetailPage() {
                   </p>
                 </div>
               )}
-
-              {project.envVariables &&
-                Object.keys(project.envVariables).length > 0 && (
-                  <div className="md:col-span-2">
-                    <p className="text-sm text-gray-400 mb-2">
-                      Environment Variables
-                    </p>
-                    <div className="bg-black/30 rounded-lg p-4 font-mono text-sm">
-                      {Object.entries(project.envVariables).map(
-                        ([key, value]) => (
-                          <div key={key} className="mb-1">
-                            <span className="text-blue-400">{key}</span>
-                            <span className="text-gray-500">=</span>
-                            <span className="text-green-400">{value}</span>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )}
             </div>
           </div>
 

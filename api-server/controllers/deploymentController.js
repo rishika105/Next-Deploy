@@ -42,9 +42,7 @@ export const checkDeploymentStatus = async (req, res) => {
       message: "Server error getting deployment status"
     })
   }
-
 }
-
 
 //get all deployments 
 export const getDeployments = async (req, res) => {

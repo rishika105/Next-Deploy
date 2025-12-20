@@ -19,7 +19,6 @@ export default function DeploymentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [logsLoading, setLogsLoading] = useState(true);
   const [isPolling, setIsPolling] = useState(true);
-  const [showLogsModal, setShowLogsModal] = useState(false);
   const pollingIntervalRef = useRef(null);
   const logsEndRef = useRef(null);
   const autoScrollRef = useRef(true);
@@ -37,7 +36,7 @@ export default function DeploymentDetailPage() {
   const handleLogsScroll = useCallback((e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
     const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-    
+
     if (isAtBottom) {
       autoScrollRef.current = true;
     } else {
@@ -72,16 +71,6 @@ export default function DeploymentDetailPage() {
       }
     }
   }, [deployment]);
-
-  // Auto-scroll when modal is open and new logs arrive
-  useEffect(() => {
-    if (showLogsModal) {
-      // Small delay to ensure DOM is updated
-      setTimeout(() => {
-        scrollToBottom();
-      }, 100);
-    }
-  }, [logs, showLogsModal, scrollToBottom]);
 
   const fetchDeploymentDetails = async () => {
     try {
@@ -159,8 +148,8 @@ export default function DeploymentDetailPage() {
 
   return (
     <>
-      <div className="min-h-screen w-[90%] mx-auto text-white mb-20">
-        <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen  bg-black mx-auto text-white mb-20">
+        <div className="container mx-auto px-4 py-8 w-[90%]">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
@@ -171,23 +160,15 @@ export default function DeploymentDetailPage() {
               <span className="text-white">{id.substring(0, 12)}...</span>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold mb-2">Deployment Details</h1>
-                <p className="text-gray-400">
-                  {deployment.project?.name && (
-                    <>
-                      Project:{" "}
-                      <Link
-                        href={`/project/${deployment.projectId}`}
-                        className="text-[#FF9FFC] hover:underline"
-                      >
-                        {deployment.projectId}
-                      </Link>
-                    </>
-                  )}
-                </p>
-              </div>
+            <div className="flex justify-between">
+              <h1 className="text-2xl font-bold">Deployment Details</h1>
+
+              <Link
+                href={`/project/${deployment.projectId}`}
+                className="bg-gradient-to-r text-black from-[#6755ae] to-[#FF9FFC] px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg shadow-[#5227FF]/20"
+              >
+                Go to Project →
+              </Link>
             </div>
           </div>
 
@@ -294,12 +275,6 @@ export default function DeploymentDetailPage() {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold">Build Logs</h3>
                 <div className="flex items-center gap-4">
-                  <button
-                    onClick={handleOpenLogsModal}
-                    className="text-sm px-4 py-2 bg-[#B19EEF] cursor-pointer rounded-lg text-black transition-colors"
-                  >
-                    View Full Logs
-                  </button>
                   <span className="text-sm text-gray-400">
                     {logs.length} entries
                   </span>
@@ -399,130 +374,6 @@ export default function DeploymentDetailPage() {
         </div>
       </div>
       <Footer />
-
-      {/* Full Screen Logs Modal */}
-      {showLogsModal && (
-        <div className="fixed inset-0 z-50">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={handleCloseLogsModal}
-          />
-          
-          {/* Modal Content */}
-          <div className="absolute inset-4 md:inset-20 bg-gray-900/95 border border-gray-700 rounded-2xl overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="bg-gray-900/90 border-b border-gray-700 px-6 py-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold">Build Logs</h3>
-                <p className="text-sm text-gray-400 mt-1">
-                  Deployment ID: {id.substring(0, 12)}...
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center">
-                  <span
-                    className={`w-2 h-2 rounded-full mr-2 ${
-                      isPolling ? "bg-green-400 animate-pulse" : "bg-gray-400"
-                    }`}
-                  ></span>
-                  <span className="text-sm text-gray-400">
-                    {isPolling ? "Live" : "Completed"}
-                  </span>
-                </div>
-                {!autoScrollRef.current && (
-                  <button
-                    onClick={handleResumeAutoScroll}
-                    className="text-sm px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 rounded-lg transition-colors"
-                  >
-                    Follow logs
-                  </button>
-                )}
-                <button
-                  onClick={handleCloseLogsModal}
-                  className="text-sm px-4 py-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700 rounded-lg transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body - Logs */}
-            <div
-              className="flex-1 overflow-y-auto p-6 font-mono text-sm bg-black/30"
-              onScroll={handleLogsScroll}
-            >
-              {logsLoading && logs.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-[#5227FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-400">Loading logs...</p>
-                  </div>
-                </div>
-              ) : logs.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-400">
-                    {isPolling ? "Waiting for logs..." : "No logs available"}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {logs.map((log, index) => (
-                    <div
-                      key={index}
-                      className={`p-2 rounded ${
-                        log.log.startsWith("ERROR")
-                          ? "bg-red-500/10 border-l-4 border-red-500"
-                          : log.log.startsWith("WARN")
-                          ? "bg-yellow-500/10 border-l-4 border-yellow-500"
-                          : log.log.includes("uploaded") ||
-                            log.log.includes("✅")
-                          ? "bg-green-500/10 border-l-4 border-green-500"
-                          : "hover:bg-gray-800/50 border-l-4 border-gray-700"
-                      }`}
-                    >
-                      <div className="flex">
-                        <span className="text-gray-500 mr-4 w-16 flex-shrink-0">
-                          {new Date(log.timestamp).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                          })}
-                        </span>
-                        <span className="flex-1">{log.log}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {/* Scroll anchor */}
-                  <div ref={logsEndRef} />
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="bg-gray-900/90 border-t border-gray-700 px-6 py-3 flex items-center justify-between">
-              <div className="text-sm text-gray-400">
-                {logs.length} log entries
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-400">
-                  Status:{" "}
-                  <span className="text-white">{deployment.status}</span>
-                </div>
-                <button
-                  onClick={() => {
-                    fetchLogs();
-                    fetchDeploymentDetails();
-                  }}
-                  className="text-sm px-3 py-1 bg-gray-800/60 hover:bg-gray-700 border border-gray-700 rounded-lg transition-colors"
-                >
-                  Refresh Logs
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -51,8 +51,8 @@ export default function AllDeployments() {
 
   return (
     <>
-      <div className="min-h-screen w-[90%] mx-auto text-white">
-        <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen bg-black  mx-auto text-white">
+        <div className="container mx-auto px-4 py-8 w-[90%]">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold mb-2">
@@ -169,8 +169,9 @@ export default function AllDeployments() {
                         <td className="py-4 px-6">
                           <div className="flex items-center space-x-2">
                             <Link
+                              onClick={(e) => e.stopPropagation()}
                               href={`/project/${deployment.projectId}`}
-                              className="px-3 py-1 bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 rounded-lg text-sm transition-colors"
+                             className="px-3 py-1 bg-[#5227FF]/20 hover:bg-[#5227FF]/30 text-[#FF9FFC] rounded-lg text-sm transition-colors"
                             >
                               Project
                             </Link>

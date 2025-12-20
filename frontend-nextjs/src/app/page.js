@@ -59,7 +59,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen text-white overflow-hidden">
+    <div className="min-h-screen bg-black text-white overflow-hidden">
       {/* Navigation */}
 
       {/* Hero Section */}
@@ -109,7 +109,7 @@ export default function Home() {
             </h1>
 
             <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
-              The simplest way to deploy your web projects. Connect your
+              The simplest way to deploy your frontend projects. Connect your
               repository and deploy in seconds. No configuration needed.
             </p>
 
@@ -167,7 +167,7 @@ export default function Home() {
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="group bg-black/50 backdrop-blur-sm border border-[#5227FF]/20 rounded-2xl p-8 hover:bg-[#5227FF]/10 transition-all duration-500 transform hover:-translate-y-2 hover:border-[#FF9FFC]/50"
+                className="group bg-black backdrop-blur-sm border border-[#5227FF]/20 rounded-2xl p-8 hover:bg-[#5227FF]/10 transition-all duration-500 transform hover:-translate-y-2 hover:border-[#FF9FFC]/50"
               >
                 <div className="text-3xl mb-4 transform group-hover:scale-110 transition-transform duration-300">
                   {feature.icon}

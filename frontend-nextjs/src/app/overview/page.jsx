@@ -18,19 +18,18 @@ export default function Overview() {
 
   //settings modal
   //on click outside close modal
-useEffect(() => {
-  if (!openModalId) return;
+  useEffect(() => {
+    if (!openModalId) return;
 
-  const handleClickOutside = (e) => {
-    if (modalRef.current && !modalRef.current.contains(e.target)) {
-      setOpenModalId(null);
-    }
-  };
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        setOpenModalId(null);
+      }
+    };
 
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => document.removeEventListener("mousedown", handleClickOutside);
-}, [openModalId]);
-
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openModalId]);
 
   //get repo path
   const getRepoPath = (url) => {
@@ -61,6 +60,20 @@ useEffect(() => {
     fetchAllProjects();
   }, []);
 
+  const handleRedeploy = async (projectId) => {
+    const token = await getToken();
+    const toastId = toast.loading("Loading...");
+    try {
+      const response = await redeployProject(token, projectId);
+      console.log("REDEPLOY RESPONSE ", response);
+      toast.success("Redeploying started!");
+      const id = response.deploymentId;
+      router.push(`/deployments/${id}`);
+    } finally {
+      toast.dismiss(toastId);
+    }
+  };
+
   //format date
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -72,8 +85,8 @@ useEffect(() => {
 
   return (
     <>
-      <div className="min-h-screen w-[90%] mx-auto text-white">
-        <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen bg-black mx-auto text-white">
+        <div className="container mx-auto px-4 py-8  w-[90%] ">
           {/* Header */}
           <div className="mb-8 flex items-center justify-between ">
             <div>
@@ -141,7 +154,7 @@ useEffect(() => {
                         </div>
                       </div>
 
-                      {/* Settings modal */}
+                      {/* Settings and redeploy modal */}
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
@@ -170,7 +183,17 @@ useEffect(() => {
                               router.push(`/project/${project.id}/settings`);
                             }}
                           >
-                            Project Settings
+                            Settings
+                          </button>
+
+                          <button
+                            className="w-full text-left hover:bg-gray-900 cursor-pointer p-2 rounded"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRedeploy(project.id);
+                            }}
+                          >
+                            Redeploy
                           </button>
                         </div>
                       )}
@@ -212,7 +235,6 @@ useEffect(() => {
                             d="M12 0C5.372 0 0 5.372 0 12c0 5.303 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.758-1.333-1.758-1.089-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.998.108-.775.42-1.305.763-1.604-2.665-.303-5.466-1.334-5.466-5.932 0-1.31.469-2.382 1.236-3.222-.124-.303-.536-1.523.117-3.176 0 0 1.008-.323 3.3 1.23a11.48 11.48 0 0 1 3.003-.404c1.018.005 2.045.138 3.003.404 2.292-1.553 3.298-1.23 3.298-1.23.655 1.653.243 2.873.12 3.176.77.84 1.234 1.912 1.234 3.222 0 4.61-2.805 5.625-5.475 5.922.431.37.814 1.103.814 2.222v3.293c0 .322.218.694.825.576C20.565 21.796 24 17.302 24 12 24 5.372 18.628 0 12 0z"
                           />
                         </svg>
-
                         {getRepoPath(project.gitURL)}
                       </Link>
                       {/* created at */}
