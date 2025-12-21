@@ -41,7 +41,7 @@ export default function Deploy() {
     { id: "svelte", name: "Svelte", icon: "🟧" },
   ];
 
-  const API_URL = "http://localhost:9000/api/project";
+  const API_URL = "http://localhost:9000/api";
 
   //api calls
   useEffect(() => {

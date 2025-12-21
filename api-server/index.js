@@ -9,6 +9,7 @@ import deployRoutes from "./routes/deployRoutes.js";
 import { kafka } from "./libs/kafkaClient.js";
 import { clickhouseClient } from "./libs/clickhouseClient.js";
 import dotenv from "dotenv";
+import gitRoutes from "./routes/gitRoutes.js";
 dotenv.config({ path: ".env", override: true });
 
 const app = express();
@@ -31,7 +32,8 @@ const statusConsumer = kafka.consumer({ groupId: 'api-server-status-consumer' })
 // Routes
 app.use("/api/project", projectRoutes(ecsClient));
 app.use("/api/logs", logRoutes());
-app.use("/api/deployment", deployRoutes())
+app.use("/api/deployment", deployRoutes());
+app.use("/api/github", gitRoutes());
 
 // consume logs and store in clickhouse db
 async function initLogsConsumer() {

@@ -6,36 +6,32 @@ import {
   getProjectById,
   redeployProject,
   deleteProject,
-  connectGitHub,
-  githubCallback,
-  disconnectGitHub,
-  getGitHubStatus,
-  getUserRepositories,
   updateProject,
-  searchProject, 
 } from "../controllers/projectController.js";
 
 export default function projectRoutes(ecsClient) {
   const router = express.Router();
 
-  // GitHub auth routes
-  router.get("/github/connect", ClerkExpressRequireAuth(), connectGitHub);
-  router.get("/github/callback", githubCallback);
-  router.post("/github/disconnect", ClerkExpressRequireAuth(), disconnectGitHub);
-  router.get("/github/status", ClerkExpressRequireAuth(), getGitHubStatus);
-  router.get("/github/repositories", ClerkExpressRequireAuth(), getUserRepositories); // NEW
-
-  // Project routes
+  // deploy
   router.post("/deploy", ClerkExpressRequireAuth(), (req, res) =>
     createProject(req, res, ecsClient)
   );
-  router.get("", ClerkExpressRequireAuth(), getAllProjects);
-  router.get("/:projectId", ClerkExpressRequireAuth(), getProjectById);
-  router.post("?search=searchTerm", ClerkExpressRequireAuth(), searchProject())
+   
+  //get
+  router.get("", ClerkExpressRequireAuth(), getAllProjects);  //search here only
+  // router.get("/search", ClerkExpressRequireAuth(), searchProject) //static route first
+
+  router.get("/:projectId", ClerkExpressRequireAuth(), getProjectById); //then dyanmic !***imp
+
+  //redeploy
   router.post("/:projectId/redeploy", ClerkExpressRequireAuth(), (req, res) =>
     redeployProject(req, res, ecsClient)
   );
+  
+  //update root dir
   router.patch("/:projectId", ClerkExpressRequireAuth(), updateProject);
+   
+  //delete
   router.delete("/:projectId", ClerkExpressRequireAuth(), deleteProject);
 
   return router;

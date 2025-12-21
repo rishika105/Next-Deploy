@@ -65,6 +65,7 @@ export const getDeploymentDetails = async (req, res) => {
       status: deployment.status,
       projectSlug: deployment.project.subDomain,
       projectName: deployment.project.name,
+      envVariables: deployment.project.envVariables,
       projectId: deployment.projectId,
       url: `http://${deployment.project.subDomain}.localhost:8000`,
       createdAt: deployment.createdAt,

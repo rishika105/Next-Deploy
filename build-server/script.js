@@ -21,6 +21,8 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GIT_REPOSITORY_URL = process.env.GIT_REPOSITORY_URL;
 const BRANCH = process.env.BRANCH || "main"; // Support specific branches
 
+
+
 const kafka = new Kafka({
   clientId: `docker-build-server-${DEPLOYMENT_ID}`,
   brokers: [process.env.KAFKA_URL],
@@ -106,6 +108,10 @@ function buildAuthenticatedGitURL(url, token) {
 //clone in output dir
 async function cloneRepository() {
   const outDirPath = path.join(__dirname, "output");
+
+  if (fs.existsSync(outDirPath)) {
+     fs.rmSync(outDirPath, { recursive: true, force: true });
+   }
 
   // Build authenticated URL
   const cloneURL = buildAuthenticatedGitURL(GIT_REPOSITORY_URL, GITHUB_TOKEN);
@@ -275,7 +281,7 @@ async function init() {
 
     await updateDeploymentStatus("FAIL");
     process.exit(1);
-  }
+  } 
 }
 
 init();

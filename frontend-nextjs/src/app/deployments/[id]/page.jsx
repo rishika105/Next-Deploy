@@ -34,7 +34,7 @@ export default function DeploymentDetailPage() {
     if (autoScroll && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [logs, autoScroll]);
+  }, [logs]);
 
   // Detect manual scrolling to disable auto-scroll
   const handleScroll = () => {
@@ -74,7 +74,7 @@ export default function DeploymentDetailPage() {
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
         }
-      }, 10000);
+      }, 5000);
     }
   }, [deployment]);
 
@@ -108,11 +108,11 @@ export default function DeploymentDetailPage() {
     }
   };
 
-  const handleRedeploy = async (projectId) => {
+  const handleRedeploy = async (projectId, envVariables) => {
     const token = await getToken();
     const toastId = toast.loading("Loading...");
     try {
-      const response = await redeployProject(token, null, projectId);
+      const response = await redeployProject(token, envVariables, projectId);
       //console.log("REDEPLOY RESPONSE ", response);
       toast.success("Redeploying started!");
       const id = response.deploymentId;
@@ -188,7 +188,12 @@ export default function DeploymentDetailPage() {
                 )}
                 {deployment.status === "FAIL" && (
                   <button
-                    onClick={() => handleRedeploy(deployment.projectId)}
+                    onClick={() =>
+                      handleRedeploy(
+                        deployment.projectId,
+                        deployment.envVariables  //send the same env vars
+                      )
+                    }
                     className="px-5 py-2.5 border border-gray-800 bg-gray-900/30 rounded-lg font-medium transition-all flex items-center gap-2"
                   >
                     <svg
@@ -335,16 +340,7 @@ export default function DeploymentDetailPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setAutoScroll(!autoScroll)}
-                    className={`text-xs px-3 py-1 rounded-lg transition-colors border ${
-                      autoScroll
-                        ? "bg-[#5227FF]/20 border-[#5227FF] text-[#FF9FFC]"
-                        : "bg-gray-800/60 border-gray-700 text-gray-400"
-                    }`}
-                  >
-                    {autoScroll ? "Auto-scroll ON" : "Auto-scroll OFF"}
-                  </button>
+            
                   <button
                     onClick={() => {
                       fetchLogs();

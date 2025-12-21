@@ -66,7 +66,9 @@ export default function ProjectDetailPage() {
     const token = await getToken();
     const toastId = toast.loading("Loading...");
     try {
-      const response = await redeployProject(token, null,  projectId);
+      //send curr env variables coz of bd strcuture it dosent change the vars
+      //sending null will result in removing all env vars from deployment and also db
+      const response = await redeployProject(token, project.envVariables,  projectId);
      // console.log("REDEPLOY RESPONSE ", response);
       toast.success("Redeploying started!");
       const id = response.deploymentId;

@@ -3,6 +3,12 @@ import { generateSlug } from "random-word-slugs";
 import { PrismaClient } from "@prisma/client";
 import { Octokit } from "@octokit/rest";
 import axios from "axios";
+import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
+
+
+const s3Client = new S3Client({
+  region: "us-east-1"
+});
 
 const config = {
   CLUSTER: "arn:aws:ecs:us-east-1:471112546627:cluster/builder-cluster",
@@ -105,139 +111,48 @@ const createECSTask = async (ecsClient, project, deployment, envVariables, githu
   return await ecsClient.send(command);
 };
 
-// ============================================
-// GITHUB AUTH ENDPOINTS
-// ============================================
-
-export const connectGitHub = (req, res) => {
-  const userId = req.auth.userId;
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${process.env.GITHUB_CALLBACK_URL}&scope=repo&state=${userId}`;
-  res.redirect(githubAuthUrl);
-};
-
-export const githubCallback = async (req, res) => {
-  const { code, state: userId } = req.query;
-
+// delete all S3 files for a project
+const deleteS3ProjectFiles = async (subDomain) => {
   try {
-    const tokenResponse = await axios.post(
-      'https://github.com/login/oauth/access_token',
-      {
-        client_id: process.env.GITHUB_CLIENT_ID,
-        client_secret: process.env.GITHUB_CLIENT_SECRET,
-        code: code
-      },
-      { headers: { Accept: 'application/json' } }
-    );
+    console.log(`🗑️ Deleting S3 files for subdomain: ${subDomain}`);
 
-    const accessToken = tokenResponse.data.access_token;
-    const octokit = new Octokit({ auth: accessToken });
-    const { data: githubUser } = await octokit.users.getAuthenticated();
+    // List all objects with the prefix
+    const listCommand = new ListObjectsV2Command({
+      Bucket: "next-deploy-outputs5",
+      Prefix: `__outputs/${subDomain}/`
+    });
 
-    await prisma.user.upsert({
-      where: { clerkId: userId },
-      update: {
-        githubAccessToken: accessToken,
-        githubUsername: githubUser.login
-      },
-      create: {
-        clerkId: userId,
-        githubAccessToken: accessToken,
-        githubUsername: githubUser.login
+    const listedObjects = await s3Client.send(listCommand);
+
+    if (!listedObjects.Contents || listedObjects.Contents.length === 0) {
+      console.log(`No files found for ${subDomain}`);
+      return { deleted: 0 };
+    }
+
+    // Delete all objects
+    const deleteCommand = new DeleteObjectsCommand({
+      Bucket: "next-deploy-outputs5",
+      Delete: {
+        Objects: listedObjects.Contents.map(({ Key }) => ({ Key })),
+        Quiet: false
       }
     });
 
-    res.redirect(`${process.env.FRONTEND_URL}/deploy?github=connected`);
+    const deleteResult = await s3Client.send(deleteCommand);
+
+    console.log(`✅ Deleted ${listedObjects.Contents.length} files from S3`);
+
+    return {
+      deleted: listedObjects.Contents.length,
+      errors: deleteResult.Errors || []
+    };
+
   } catch (error) {
-    console.error("GitHub OAuth Error:", error);
-    res.redirect(`${process.env.FRONTEND_URL}/deploy?github=error`);
+    console.error("Error deleting S3 files:", error);
+    throw error;
   }
 };
 
-export const disconnectGitHub = async (req, res) => {
-  const userId = req.auth.userId;
-
-  await prisma.user.update({
-    where: { clerkId: userId },
-    data: {
-      githubAccessToken: null,
-      githubUsername: null
-    }
-  });
-
-  res.json({ success: true, message: "GitHub disconnected" });
-};
-
-export const getGitHubStatus = async (req, res) => {
-  const userId = req.auth.userId;
-
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { githubUsername: true, githubAccessToken: true }
-  });
-
-  res.json({
-    connected: !!user?.githubUsername,
-    username: user?.githubUsername
-  });
-};
-
-// ============================================
-//  GET USER'S GITHUB REPOSITORIES
-// ============================================
-
-export const getUserRepositories = async (req, res) => {
-  const userId = req.auth.userId;
-
-  try {
-    const user = await getUser(userId);
-    const octokit = new Octokit({ auth: user.githubAccessToken });
-
-    // Get user's repos (both owned and collaborated)
-    const { data: repos } = await octokit.repos.listForAuthenticatedUser({
-      sort: 'updated',
-      per_page: 100,
-      affiliation: 'owner,collaborator'
-    });
-
-    // Get already deployed projects to mark them
-    const deployedProjects = await prisma.project.findMany({
-      where: { userId },
-      select: { gitURL: true }
-    });
-
-    const deployedUrls = new Set(deployedProjects.map(p => p.gitURL));
-
-    const formattedRepos = repos.map(repo => ({
-      id: repo.id,
-      name: repo.name,
-      fullName: repo.full_name,
-      url: repo.html_url,
-      private: repo.private,
-      description: repo.description,
-      updatedAt: repo.updated_at,
-      defaultBranch: repo.default_branch,
-      isDeployed: deployedUrls.has(repo.html_url)
-    }));
-
-    res.json({
-      success: true,
-      repositories: formattedRepos
-    });
-  } catch (error) {
-    if (error.message === "GITHUB_NOT_CONNECTED") {
-      return res.status(403).json({
-        success: false,
-        message: "GitHub not connected",
-        needsGitHubAuth: true
-      });
-    }
-    console.error("Fetch repositories error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch repositories"
-    });
-  }
-};
 
 // ============================================
 // PROJECT DEPLOYMENT
@@ -380,15 +295,25 @@ export const createProject = async (req, res, ecsClient) => {
 export const getAllProjects = async (req, res) => {
   try {
     const userId = req.auth.userId;
+    const { search } = req.query;
+
     if (!userId) {
       return res.status(404).json({
         success: false,
-        message: "User not found"
+        message: "User not found",
       });
     }
 
     const projects = await prisma.project.findMany({
-      where: { userId },
+      where: {
+        userId,
+        ...(search && {
+          name: {
+            contains: search,
+            mode: "insensitive",
+          },
+        }),
+      },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -401,26 +326,21 @@ export const getAllProjects = async (req, res) => {
             status: true,
             createdAt: true,
           },
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 1, // 🔥 only latest deployment
+          orderBy: { createdAt: "desc" },
+          take: 1,
         },
       },
     });
 
-    // console.log(projects)
-
     return res.status(200).json({
       success: true,
       projects,
-
     });
   } catch (error) {
     console.error("Get projects error:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error getting projects"
+      message: "Server error getting projects",
     });
   }
 };
@@ -450,91 +370,6 @@ export const getProjectById = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error getting project"
-    });
-  }
-};
-
-export const searchProject = async (req, res) => {
-  try {
-    const { searchTerm } = req.query;
-    const projects = await prisma.post.findMany({
-      where: {
-        title: {
-          contains: searchTerm,
-          mode: 'insensitive', // makes the search case-insensitive in PostgreSQL
-        },
-      },
-    });
-
-    return res.status(200).json({
-      success: true,
-      projects
-    });
-  } catch (error) {
-    console.error("Search project error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error searching project"
-    });
-  }
-};
-
-
-export const redeployProject = async (req, res, ecsClient) => {
-  const userId = req.auth.userId;
-  const { projectId } = req.params;
-  const { envVariables = null } = req.body;
-  const user = await getUser(userId);
-
-  try {
-    const project = await prisma.project.findFirst({
-      where: { id: projectId, userId }
-    });
-
-    if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: "Project not found"
-      });
-    }
-
-    // Update env variables if provided
-    if (envVariables) {
-      await prisma.project.update({
-        where: { id: projectId },
-        data: { envVariables }
-      });
-    }
-
-    // Create new deployment
-    const deployment = await prisma.deployment.create({
-      data: {
-        userId,
-        projectId: project.id,
-        status: "QUEUED"
-      }
-    });
-
-    // Start ECS task
-    await createECSTask(ecsClient, project, deployment, envVariables || project.envVariables, user.githubAccessToken);
-
-    // Update status
-    await prisma.deployment.update({
-      where: { id: deployment.id },
-      data: { status: "IN_PROGRESS" }
-    });
-
-    return res.json({
-      success: true,
-      deploymentId: deployment.id,
-      status: "IN_PROGRESS",
-      url: `http://${project.subDomain}.localhost:8000`
-    });
-  } catch (error) {
-    console.error("Redeploy error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to redeploy project"
     });
   }
 };
@@ -582,6 +417,92 @@ export const updateProject = async (req, res) => {
   }
 };
 
+export const redeployProject = async (req, res, ecsClient) => {
+  const userId = req.auth.userId;
+  const { projectId } = req.params;
+  const { envVariables } = req.body; // Can be empty object {} or null
+
+  try {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, userId }
+    });
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found"
+      });
+    }
+
+    const user = await getUser(userId);
+
+    // Always update env variables - even if empty/deleted 
+    // partial deletion of env vars also handled it replaces the entire obj
+    let updatedEnvVars = project.envVariables;
+
+    if (envVariables !== undefined && envVariables !== null) {
+      // Update database with new env vars (or empty object if all removed)
+      await prisma.project.update({
+        where: { id: projectId },
+        data: { envVariables: envVariables }
+      });
+      updatedEnvVars = envVariables;
+
+      console.log(`Updated env variables for project ${projectId}:`,
+        Object.keys(envVariables).length > 0
+          ? Object.keys(envVariables)
+          : "All removed"
+      );
+    }
+
+    const deployment = await prisma.deployment.create({
+      data: {
+        userId,
+        projectId: project.id,
+        status: "QUEUED"
+      }
+    });
+
+    // Pass the updated env vars to ECS
+    await createECSTask(
+      ecsClient,
+      project,
+      deployment,
+      updatedEnvVars, // Use updated vars
+      user.githubAccessToken
+    );
+
+    await prisma.deployment.update({
+      where: { id: deployment.id },
+      data: { status: "IN_PROGRESS" }
+    });
+
+    return res.json({
+      success: true,
+      deploymentId: deployment.id,
+      status: "IN_PROGRESS",
+      url: `http://${project.subDomain}.localhost:8000`,
+      message: "Redeployment started successfully"
+    });
+
+  } catch (error) {
+    console.error("Redeploy error:", error);
+
+    if (error.message === "GITHUB_NOT_CONNECTED") {
+      return res.status(403).json({
+        success: false,
+        message: "GitHub not connected"
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to redeploy project"
+    });
+  }
+};
+
+// delete S3 files , deployments and project datas
 export const deleteProject = async (req, res) => {
   try {
     const userId = req.auth.userId;
@@ -598,20 +519,38 @@ export const deleteProject = async (req, res) => {
       });
     }
 
-    // Delete deployments first
+    console.log(`Deleting project: ${project.name} (${project.subDomain})`);
+
+    // ✅ STEP 1: Delete S3 files
+    try {
+      const s3Result = await deleteS3ProjectFiles(project.subDomain);
+      console.log(`S3 cleanup: ${s3Result.deleted} files deleted`);
+
+      if (s3Result.errors && s3Result.errors.length > 0) {
+        console.warn("Some S3 files failed to delete:", s3Result.errors);
+      }
+    } catch (s3Error) {
+      // Log error but continue with database deletion
+      console.error("S3 deletion failed (non-critical):", s3Error);
+    }
+
+    // ✅ STEP 2: Delete deployments
     await prisma.deployment.deleteMany({
       where: { projectId }
     });
 
-    // Delete project
+    // ✅ STEP 3: Delete project
     await prisma.project.delete({
       where: { id: projectId }
     });
 
+    console.log(`✅ Project ${project.name} deleted successfully`);
+
     return res.status(200).json({
       success: true,
-      message: "Project deleted successfully"
+      message: "Project and associated files deleted successfully"
     });
+
   } catch (error) {
     console.error("Delete project error:", error);
     return res.status(500).json({
@@ -620,3 +559,7 @@ export const deleteProject = async (req, res) => {
     });
   }
 };
+
+
+
+

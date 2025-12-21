@@ -4,10 +4,9 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import Footer from "../components/Footer";
-import { getProjects, redeployProject } from "@/services/projectService";
+import { getProjects } from "@/services/projectService";
 import { useRouter } from "next/navigation";
 import { EllipsisVertical, Search } from "lucide-react";
-import toast from "react-hot-toast";
 
 export default function Overview() {
   const { getToken } = useAuth();
@@ -16,6 +15,8 @@ export default function Overview() {
   const [openModalId, setOpenModalId] = useState(null);
   const modalRef = useRef(null);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(null);
+  const [searchedProjects, setSearchedProjects] = useState(null);
 
   //settings modal
   //on click outside close modal
@@ -49,7 +50,7 @@ export default function Overview() {
     const token = await getToken();
     try {
       setLoading(true);
-      const response = await getProjects(token);
+      const response = await getProjects(null, token);
       // console.log(response);
       setProjects(response.projects);
     } finally {
@@ -61,9 +62,15 @@ export default function Overview() {
     fetchAllProjects();
   }, []);
 
-  const handleSearch = () => {
+  useEffect(() => {
+    const delay = setTimeout(async () => {
+      const token = await getToken();
+      const response = await getProjects(searchTerm, token);
+      setProjects(response.projects);
+    }, 400);
 
-  }
+    return () => clearTimeout(delay);
+  }, [searchTerm]);
 
   //format date
   const formatDate = (dateString) => {
@@ -83,16 +90,17 @@ export default function Overview() {
             <div>
               <h1 className="font-bold mb-2 text-2xl">
                 <span className="bg-gradient-to-r text-gray-100 bg-clip-text">
-                  Projects
+                 My Projects
                 </span>
               </h1>
             </div>
-            
+
             {/* Search projects */}
             <input
               className="bg-black py-3 px-4 w-[70%] rounded-md border border-gray-700 hover:border-gray-600"
               placeholder="🔍︎ Search projects"
-              onClick={(e) => handleSearch(e)}
+              value={searchTerm === null ? "" : searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
 
             <Link
@@ -161,8 +169,6 @@ export default function Overview() {
                           setOpenModalId(
                             openModalId === project.id ? null : project.id
                           );
-
-                          // console.log(openModalId);
                         }}
                       >
                         <EllipsisVertical className="cursor-pointer size-5 absolute z-10 right-4 top-6" />

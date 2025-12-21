@@ -10,8 +10,9 @@ export const createProject = async (data, token) => {
   return res.data;
 };
 
-export const getProjects = async (token) => {
+export const getProjects = async (search = "", token) => {
   const res = await api.get("/project", {
+    params: search ? { search } : {},
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
@@ -33,14 +34,19 @@ export const getProjectDetails = async (projectId, token) => {
 
 
 export const redeployProject = async (token, envVariables, projectId) => {
-  const res = await api.post(
-    `/project/${projectId}/redeploy`,
-    { envVariables },
+  // ✅ Always send envVariables, even if empty object
+  // This ensures removed variables are properly handled
+  const res = await api.post(`/project/${projectId}/redeploy`,
     {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      envVariables: envVariables || {} // Send empty object if null/undefined 
+    },
+    {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  );
   return res.data;
 };
+
 
 export const deleteProject = async (projectId, token) => {
   const res = await api.delete(`/project/${projectId}`, {
@@ -55,3 +61,4 @@ export const updateProjectSettings = async (projectId, data, token) => {
   })
   return res.data
 }
+
