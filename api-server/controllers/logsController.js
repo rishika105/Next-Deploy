@@ -1,33 +1,28 @@
-import { clickhouseClient } from "../libs/clickhouseClient.js";
+import { clickhouseClient } from "../config/clickhouseClient.js";
+import { asyncHandler } from "../utils/async-handler.js";
 
-export const fetchLogs = async (req, res) => {
-    try {
-        const id = req.params.deploymentId;
-        //get logs from db
-        const logs = await clickhouseClient.query({
-            query: `SELECT event_id, deployment_id, log, timestamp from log_events where deployment_id ={deployment_id:String}`,
-            query_params: {
-                deployment_id: id
-            },
-            format: 'JSON'
-        })
+/* ===========================
+   GET LOGS OF DEPLOYMENT
+=========================== */
+export const fetchLogs = asyncHandler(async (req, res) => {
+    const { deploymentId } = req.params;
 
-        //its in json the records /logs
-        //convert back to normal
-        const rawLogs = await logs.json();
-        // console.log("Raw logs from ClickHouse:", rawLogs); // ADD THIS
-        // console.log("Number of logs:", rawLogs.length);     // ADD THIS
+    const logs = await clickhouseClient.query({
+        query: `
+      SELECT event_id, deployment_id, log, timestamp
+      FROM log_events
+      WHERE deployment_id = {deployment_id:String}
+    `,
+        query_params: {
+            deployment_id: deploymentId,
+        },
+        format: "JSON",
+    });
 
-        return res.json({
-            success: true,
-            rawLogs
-        })
-    }
-    catch (err) {
-        console.log(err);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error fetching logs"
-        })
-    }
-}
+    const rawLogs = await logs.json();
+
+    return res.status(200).json({
+        success: true,
+        rawLogs,
+    });
+});

@@ -3,34 +3,20 @@
 import { Octokit } from "@octokit/rest";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
+import { getUser } from "../utils/helpers.js";
+import { asyncHandler } from "../utils/async-handler.js";
 const prisma = new PrismaClient();
-
-// ============================================
-// HELPER FUNCTION
-// ============================================
-const getUser = async (userId) => {
-    const user = await prisma.user.findUnique({
-        where: { clerkId: userId },
-        select: { githubAccessToken: true, githubUsername: true }
-    });
-
-    if (!user?.githubAccessToken) {
-        throw new Error("GITHUB_NOT_CONNECTED");
-    }
-
-    return user;
-};
 
 
 // ============================================
 // GITHUB AUTH ENDPOINTS
 // ============================================
 
-export const connectGitHub = (req, res) => {
-    const userId = req.auth.userId;
-    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${process.env.GITHUB_CALLBACK_URL}&scope=repo&state=${userId}`;
-    res.redirect(githubAuthUrl);
-};
+export const connectGitHub = asyncHandler((req, res) => {
+  const userId = req.auth.userId;
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${process.env.GITHUB_CALLBACK_URL}&scope=repo&state=${userId}`;
+  res.redirect(githubAuthUrl);
+});
 
 export const githubCallback = async (req, res) => {
     const { code, state: userId } = req.query;
@@ -70,33 +56,34 @@ export const githubCallback = async (req, res) => {
     }
 };
 
-export const disconnectGitHub = async (req, res) => {
+export const disconnectGitHub = asyncHandler(async (req, res) => {
     const userId = req.auth.userId;
 
     await prisma.user.update({
         where: { clerkId: userId },
         data: {
             githubAccessToken: null,
-            githubUsername: null
-        }
+            githubUsername: null,
+        },
     });
 
     res.json({ success: true, message: "GitHub disconnected" });
-};
+});
 
-export const getGitHubStatus = async (req, res) => {
+export const getGitHubStatus = asyncHandler(async (req, res) => {
     const userId = req.auth.userId;
 
     const user = await prisma.user.findUnique({
         where: { clerkId: userId },
-        select: { githubUsername: true, githubAccessToken: true }
+        select: { githubUsername: true, githubAccessToken: true },
     });
 
     res.json({
         connected: !!user?.githubUsername,
-        username: user?.githubUsername
+        username: user?.githubUsername,
     });
-};
+});
+
 
 // ============================================
 //  GET USER'S GITHUB REPOSITORIES

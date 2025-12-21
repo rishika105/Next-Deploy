@@ -6,8 +6,8 @@ import cors from "cors"
 import { v4 as uuidv4 } from "uuid";
 import { PrismaClient } from "@prisma/client";
 import deployRoutes from "./routes/deployRoutes.js";
-import { kafka } from "./libs/kafkaClient.js";
-import { clickhouseClient } from "./libs/clickhouseClient.js";
+import { kafka } from "./config/kafkaClient.js";
+import { clickhouseClient } from "./config/clickhouseClient.js";
 import dotenv from "dotenv";
 import gitRoutes from "./routes/gitRoutes.js";
 dotenv.config({ path: ".env", override: true });

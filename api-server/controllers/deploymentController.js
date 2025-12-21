@@ -1,119 +1,88 @@
 import { PrismaClient } from "@prisma/client";
-import { dmmfToRuntimeDataModel } from "@prisma/client/runtime/library";
-
-const prisma = new PrismaClient()
+import { asyncHandler } from "../utils/async-handler.js";
 
 
+const prisma = new PrismaClient();
 
-//get all deployments 
-export const getAllDeployments = async (req, res) => {
-  try {
-    const id = req.auth.userId;
-    if (!id) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
+/* ===========================
+   GET ALL DEPLOYMENTS
+=========================== */
+export const getAllDeployments = asyncHandler(async (req, res) => {
+  const id = req.auth.userId;
 
-    const deployments = await prisma.deployment.findMany({
-      where: { userId: id },
-      include: { project: true },
-      orderBy: [
-        { updatedAt: "desc" },
-        { createdAt: "desc" }
-      ]
-    });
-
-    if (deployments.length === 0)
-      return res.status(200).json([]);
-
-    return res.status(200).json({
-      success: true,
-      deployments
-    });
-  } catch (error) {
-    console.log("Get deployments error: ", error);
-    return res.status(500).json({
+  if (!id) {
+    return res.status(404).json({
       success: false,
-      message: "Server error getting deployments"
-    });
-  }
-};
-
-//check deployment status
-export const getDeploymentDetails = async (req, res) => {
-  try {
-    const { deploymentId } = req.params;
-
-    const deployment = await prisma.deployment.findUnique({
-      where: { id: deploymentId },
-      include: { project: true }
-    });
-
-    if (!deployment) {
-      return res.status(404).json({
-        success: false,
-        message: "Deployment not found"
-      });
-    }
-
-    //response.data
-    return res.status(200).json({
-      success: true,
-      id: deployment.id,
-      status: deployment.status,
-      projectSlug: deployment.project.subDomain,
-      projectName: deployment.project.name,
-      envVariables: deployment.project.envVariables,
-      projectId: deployment.projectId,
-      url: `http://${deployment.project.subDomain}.localhost:8000`,
-      createdAt: deployment.createdAt,
-      updatedAt: deployment.updatedAt
+      message: "User not found",
     });
   }
 
-  catch (error) {
-    console.log("Get deployments status error: ", error);
-    return res.status(500).json({
+  const deployments = await prisma.deployment.findMany({
+    where: { userId: id },
+    include: { project: true },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+  });
+
+  return res.status(200).json({
+    success: true,
+    deployments,
+  });
+});
+
+/* ===========================
+   GET DEPLOYMENT DETAILS
+=========================== */
+export const getDeploymentDetails = asyncHandler(async (req, res) => {
+  const { deploymentId } = req.params;
+
+  const deployment = await prisma.deployment.findUnique({
+    where: { id: deploymentId },
+    include: { project: true },
+  });
+
+  if (!deployment) {
+    return res.status(404).json({
       success: false,
-      message: "Server error getting deployment status"
-    })
-  }
-}
-
-
-//get deployments by project id
-export const getDeploymentsByProjectId = async (req, res) => {
-  try {
-    const id = req.auth.userId;
-    const { projectId } = req.params;
-
-    if (!id || !projectId) {
-      return res.status(404).json({
-        success: false,
-        message: "User or project not found"
-      });
-    }
-
-    const deployments = await prisma.deployment.findMany({
-      where: { userId: id, projectId },
-      include: { project: true },
-      orderBy: [
-        { updatedAt: "desc" },
-        { createdAt: "desc" }
-      ]
+      message: "Deployment not found",
     });
-
-    if (deployments.length === 0)
-      return res.status(200).json([]);
-
-    return res.status(200).json({
-      success: true,
-      deployments
-    });
-  } catch (error) {
-    console.log("Get deployments error: ", error);
-    return res.status(500).json({ success: false, message: "Server error getting deployments of project" });
   }
-};
+
+  return res.status(200).json({
+    success: true,
+    id: deployment.id,
+    status: deployment.status,
+    projectSlug: deployment.project.subDomain,
+    projectName: deployment.project.name,
+    envVariables: deployment.project.envVariables,
+    projectId: deployment.projectId,
+    url: `http://${deployment.project.subDomain}.localhost:8000`,
+    createdAt: deployment.createdAt,
+    updatedAt: deployment.updatedAt,
+  });
+});
+
+/* ===========================
+   GET DEPLOYMENTS BY PROJECT ID
+=========================== */
+export const getDeploymentsByProjectId = asyncHandler(async (req, res) => {
+  const id = req.auth.userId;
+  const { projectId } = req.params;
+
+  if (!id || !projectId) {
+    return res.status(404).json({
+      success: false,
+      message: "User or project not found",
+    });
+  }
+
+  const deployments = await prisma.deployment.findMany({
+    where: { userId: id, projectId },
+    include: { project: true },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+  });
+
+  return res.status(200).json({
+    success: true,
+    deployments,
+  });
+});
