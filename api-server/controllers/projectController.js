@@ -8,7 +8,7 @@ import {
   getUser,
   parseGitHubUrl,
   verifyRepoAccess,
-} from "../utils/helpers.js";
+} from "../utils/projectHelpers.js";
 import { asyncHandler } from "../utils/async-handler.js";
 
 
@@ -123,7 +123,7 @@ export const createProject = asyncHandler(async (req, res, ecsClient) => {
 });
 
 // ============================================
-// GET ALL PROJECTS
+// GET ALL PROJECTS / SEARCH
 // ============================================
 
 export const getAllProjects = asyncHandler(async (req, res) => {

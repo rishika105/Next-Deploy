@@ -3,7 +3,7 @@
 import { Octokit } from "@octokit/rest";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
-import { getUser } from "../utils/helpers.js";
+import { getUser } from "../utils/projectHelpers.js";
 import { asyncHandler } from "../utils/async-handler.js";
 const prisma = new PrismaClient();
 
@@ -13,9 +13,9 @@ const prisma = new PrismaClient();
 // ============================================
 
 export const connectGitHub = asyncHandler((req, res) => {
-  const userId = req.auth.userId;
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${process.env.GITHUB_CALLBACK_URL}&scope=repo&state=${userId}`;
-  res.redirect(githubAuthUrl);
+    const userId = req.auth.userId;
+    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${process.env.GITHUB_CALLBACK_URL}&scope=repo&state=${userId}`;
+    res.redirect(githubAuthUrl);
 });
 
 export const githubCallback = async (req, res) => {

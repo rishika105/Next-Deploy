@@ -6,38 +6,62 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 model User {
-  id                 String   @id @default(uuid())
-  clerkId            String   @unique
-  githubAccessToken  String?  // OAuth token
-  githubUsername     String?  // GitHub username
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                String   @id @default(cuid())
+  clerkId           String   @unique
+  githubAccessToken String? // OAuth token
+  githubUsername    String? // GitHub username
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  projects    Project[]
+  deployments Deployment[]
 }
 
 model Project {
-  id            String       @id @default(uuid())
-  userId        String
-  name          String
-  gitURL        String       @map("git_url")
-  subDomain     String       @map("sub_domain")
-  customDomain  String?      @map("custom_domain")
-  framework     String       @default("react")
-  rootDirectory String?      @map("root_directory")
-  envVariables  Json?        @map("env_variables")
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  Deployment    Deployment[]
+  id           String  @id @default(cuid())
+  userId       String
+  name         String
+  gitURL       String  @map("git_url")
+  subDomain    String  @map("sub_domain")
+  customDomain String? @map("custom_domain")
+
+  webhookEnabled Boolean @default(false)
+  webhookId      String?
+
+  framework     String   @default("react")
+  rootDirectory String?  @map("root_directory")
+  envVariables  Json?    @map("env_variables")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  Deployment Deployment[]
+  user       User         @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subDomain])
 }
 
 model Deployment {
-  id        String           @id @default(uuid())
+  id        String           @id @default(cuid())
   userId    String
   projectId String           @map("project_id")
   status    DeploymentStatus @default(NOT_STARTED)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  project   Project          @relation(fields: [projectId], references: [id])
+
+  commitHash    String?
+  commitMessage String?
+  commitAuthor  String?
+  branch        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id])
+  user      User     @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([status])
 }
 
 enum DeploymentStatus {
