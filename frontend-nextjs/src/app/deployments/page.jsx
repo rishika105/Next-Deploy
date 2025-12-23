@@ -48,22 +48,10 @@ export default function AllDeployments() {
     }
   };
 
-  const calculateDuration = (createdAt, updatedAt) => {
-    const start = new Date(createdAt);
-    const end = new Date(updatedAt);
-    const durationMs = end - start;
-    const seconds = Math.floor(durationMs / 1000);
-    
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    
-    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-  };
-
   return (
     <>
       <div className="min-h-screen bg-black text-white">
-        <div className="container mx-auto px-4 py-8 w-[90%]">
+        <div className="container mx-auto px-4 py-8 w-[90%] mb-28">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold mb-2">
@@ -71,7 +59,9 @@ export default function AllDeployments() {
                 All Deployments
               </span>
             </h1>
-            <p className="text-gray-400">View and manage all your deployments</p>
+            <p className="text-gray-400">
+              View and manage all your deployments
+            </p>
           </div>
 
           {loading ? (
@@ -109,9 +99,6 @@ export default function AllDeployments() {
                       </th>
                       <th className="text-left py-4 px-6 text-gray-400 font-medium">
                         Status
-                      </th>
-                      <th className="text-left py-4 px-6 text-gray-400 font-medium">
-                        Duration
                       </th>
                       <th className="text-left py-4 px-6 text-gray-400 font-medium">
                         Deployed
@@ -169,7 +156,9 @@ export default function AllDeployments() {
                                 )}
                               </>
                             ) : (
-                              <span className="text-sm text-gray-500">Manual deployment</span>
+                              <span className="text-sm text-gray-500">
+                                Manual deployment
+                              </span>
                             )}
                           </div>
                         </td>
@@ -200,29 +189,21 @@ export default function AllDeployments() {
                           </div>
                         </td>
 
-                        {/* ✅ Duration */}
-                        <td className="py-4 px-6">
-                          <div className="flex items-center gap-2 text-gray-300">
-                            <Clock className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">
-                              {deployment.status === "IN_PROGRESS" 
-                                ? "Building..."
-                                : calculateDuration(deployment.createdAt, deployment.updatedAt)
-                              }
-                            </span>
-                          </div>
-                        </td>
-
                         {/* Deployed Date */}
                         <td className="py-4 px-6">
                           <p className="text-gray-300 text-sm">
-                            {new Date(deployment.createdAt).toLocaleDateString()}
+                            {new Date(
+                              deployment.createdAt
+                            ).toLocaleDateString()}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {new Date(deployment.createdAt).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {new Date(deployment.createdAt).toLocaleTimeString(
+                              [],
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
                           </p>
                         </td>
 
@@ -236,17 +217,18 @@ export default function AllDeployments() {
                             >
                               Project
                             </Link>
-                            {deployment.status === "READY" && deployment.url && (
-                              <a
-                                onClick={(e) => e.stopPropagation()}
-                                href={deployment.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-sm transition-colors"
-                              >
-                                Visit
-                              </a>
-                            )}
+                            {deployment.status === "READY" &&
+                              deployment.url && (
+                                <a
+                                  onClick={(e) => e.stopPropagation()}
+                                  href={deployment.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-sm transition-colors"
+                                >
+                                  Visit
+                                </a>
+                              )}
                           </div>
                         </td>
                       </tr>

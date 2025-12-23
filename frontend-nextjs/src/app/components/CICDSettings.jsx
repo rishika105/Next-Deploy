@@ -20,7 +20,10 @@ export default function CICDSettings({ projectId }) {
   useEffect(() => {
     checkWebhookStatus();
   }, [projectId]);
-
+   
+  //check on restart or on re-render stored in db webhook status until disabled from db ci/cd is triggered
+  //from here only it knows it is enabled and set it without needing to store in state
+  //retrieve status directly from db 
   const checkWebhookStatus = async () => {
     try {
       const token = await getToken();

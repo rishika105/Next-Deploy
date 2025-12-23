@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import Footer from "@/app/components/Footer.jsx";
 import {
   getProjectDetails,
