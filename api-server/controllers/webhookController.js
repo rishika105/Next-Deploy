@@ -1,4 +1,3 @@
-
 import { PrismaClient } from "@prisma/client";
 import { Octokit } from "@octokit/rest";
 import { asyncHandler } from "../utils/async-handler.js";
@@ -258,7 +257,7 @@ export const handleWebhook = asyncHandler(async (req, res, ecsClient) => {
     data: { status: "IN_PROGRESS" }
   });
 
-  console.log(`Auto-deployment started for ${project.name} - Deployment ID: ${deployment.id}`);
+   console.log(`Auto-deployment started for ${project.name} - Deployment ID: ${deployment.id}`);
 
   return res.status(200).json({
     success: true,

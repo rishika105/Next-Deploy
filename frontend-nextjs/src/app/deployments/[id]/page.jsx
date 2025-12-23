@@ -29,13 +29,6 @@ export default function DeploymentDetailPage() {
   const logsContainerRef = useRef(null);
   const FINAL_STATUSES = ["READY", "FAIL"];
 
-  // Auto-scroll to bottom when new logs arrive
-  useEffect(() => {
-    if (autoScroll && logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [logs]);
-
   // Detect manual scrolling to disable auto-scroll
   const handleScroll = () => {
     if (!logsContainerRef.current) return;
@@ -191,7 +184,7 @@ export default function DeploymentDetailPage() {
                     onClick={() =>
                       handleRedeploy(
                         deployment.projectId,
-                        deployment.envVariables  //send the same env vars
+                        deployment.envVariables //send the same env vars
                       )
                     }
                     className="px-5 py-2.5 border border-gray-800 bg-gray-900/30 rounded-lg font-medium transition-all flex items-center gap-2"
@@ -340,7 +333,6 @@ export default function DeploymentDetailPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-            
                   <button
                     onClick={() => {
                       fetchLogs();

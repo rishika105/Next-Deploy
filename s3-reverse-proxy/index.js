@@ -27,11 +27,12 @@ app.use((req, res) => {
   return proxy.web(req, res, { target: resolvesTo, changeOrigin: true, ignorePath: true });
 });
 
-app.get("/", () => {
+app.get("/", (req, res) => {
   return res.status(200).json({
     success: true,
     message: "Reverse proxy is running!"
-  })
-})
+  });
+});
+
 
 app.listen(PORT, () => console.log(`Reverse proxy running...${PORT}`));
