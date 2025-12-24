@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import Footer from "../components/Footer";
+import Footer from "../../components/Footer";
 import { getProjects } from "@/services/projectService";
 import { useRouter } from "next/navigation";
 import { EllipsisVertical, Search } from "lucide-react";
@@ -90,7 +90,7 @@ export default function Overview() {
             <div>
               <h1 className="font-bold mb-2 text-2xl">
                 <span className="bg-gradient-to-r text-gray-100 bg-clip-text">
-                 My Projects
+                  My Projects
                 </span>
               </h1>
             </div>
@@ -189,6 +189,16 @@ export default function Overview() {
                             }}
                           >
                             Settings
+                          </button>
+                          <button
+                            className="w-full text-left hover:bg-gray-900 cursor-pointer p-2 rounded"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenModalId(null);
+                              router.push(`/analytics/${project.id}`);
+                            }}
+                          >
+                            Web Analytics
                           </button>
                         </div>
                       )}

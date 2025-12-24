@@ -71,3 +71,22 @@ enum DeploymentStatus {
   READY
   FAIL
 }
+
+
+model Analytics {
+  id           String   @id @default(cuid())
+  subdomain    String   // Which project was accessed
+  path         String   // URL path (/, /about, etc.)
+  method       String   // GET, POST, etc.
+  statusCode   Int      // 200, 404, 500, etc.
+  responseTime Int      // Milliseconds
+  userIp       String   @map("user_ip")
+  userAgent    String?  @map("user_agent")
+  referer      String?  // Where user came from
+  country      String?
+  city         String?
+  timestamp    DateTime @default(now())
+  
+  @@index([subdomain])
+  @@index([timestamp])
+}

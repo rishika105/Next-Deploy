@@ -4,13 +4,17 @@ import { useAuth } from "@clerk/nextjs";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Footer from "@/app/components/Footer";
+import Footer from "@/components/Footer";
 import {
   getProjectDeployments,
   getProjectDetails,
   redeployProject,
 } from "@/services/projectService";
-import { EllipsisVertical } from "lucide-react";
+import {
+  ChartNoAxesColumnIncreasing,
+  ChartNoAxesCombined,
+  EllipsisVertical,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function ProjectDetailPage() {
@@ -68,8 +72,12 @@ export default function ProjectDetailPage() {
     try {
       //send curr env variables coz of bd strcuture it dosent change the vars
       //sending null will result in removing all env vars from deployment and also db
-      const response = await redeployProject(token, project.envVariables,  projectId);
-     // console.log("REDEPLOY RESPONSE ", response);
+      const response = await redeployProject(
+        token,
+        project.envVariables,
+        projectId
+      );
+      // console.log("REDEPLOY RESPONSE ", response);
       toast.success("Redeploying started!");
       const id = response.deploymentId;
       router.push(`/deployments/${id}`);
@@ -241,7 +249,6 @@ export default function ProjectDetailPage() {
                   </a>
                 )}
               </div>
-
               <div>
                 <p className="text-sm text-gray-400 mb-1">Latest Status</p>
                 {latestDeployment ? (
@@ -256,7 +263,6 @@ export default function ProjectDetailPage() {
                   <span className="text-gray-500">No deployments</span>
                 )}
               </div>
-
               <div>
                 <p className="text-sm text-gray-400 mb-1">Git Repository</p>
                 <a
@@ -277,20 +283,20 @@ export default function ProjectDetailPage() {
                   {project.gitURL.split("/").slice(-2).join("/")}
                 </a>
               </div>
-
               <div>
                 <p className="text-sm text-gray-400 mb-1">Subdomain</p>
                 <p className="text-white font-mono">{project.subDomain}</p>
               </div>
-
-              {project.rootDirectory && (
-                <div>
-                  <p className="text-sm text-gray-400 mb-1">Root Directory</p>
-                  <p className="text-white font-mono">
-                    {project.rootDirectory}
-                  </p>
+              {/* analytics */}
+              <Link
+                href={`/analytics/${project.id}`}
+                className="px-4 py-2 rounded-lg bg-black border border-gray-700 w-fit mt-3"
+              >
+                <div className="flex gap-1">
+                  {" "}
+                  <ChartNoAxesColumnIncreasing /> View Web Analytics
                 </div>
-              )}
+              </Link>
             </div>
           </div>
 

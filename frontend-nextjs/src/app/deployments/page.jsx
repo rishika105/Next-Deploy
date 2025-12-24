@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getAllDeployments } from "@/services/deployService";
-import Footer from "../components/Footer";
+import Footer from "../../components/Footer";
 import { useRouter } from "next/navigation";
 import { GitBranch, User, Clock } from "lucide-react";
 

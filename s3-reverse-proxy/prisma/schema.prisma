@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String       @id @default(cuid())
+  clerkId           String       @unique
+  githubAccessToken String?
+  githubUsername    String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  deployments       Deployment[]
+  projects          Project[]
+}
+
+model Project {
+  id             String       @id @default(cuid())
+  userId         String
+  name           String
+  gitURL         String       @map("git_url")
+  subDomain      String       @map("sub_domain")
+  customDomain   String?      @map("custom_domain")
+  framework      String       @default("react")
+  rootDirectory  String?      @map("root_directory")
+  envVariables   Json?        @map("env_variables")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  webhookEnabled Boolean      @default(false)
+  webhookId      String?
+  Deployment     Deployment[]
+  user           User         @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subDomain])
+}
+
+model Deployment {
+  id            String           @id @default(cuid())
+  status        DeploymentStatus @default(NOT_STARTED)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  projectId     String           @map("project_id")
+  userId        String
+  branch        String?
+  commitAuthor  String?
+  commitHash    String?
+  commitMessage String?
+  project       Project          @relation(fields: [projectId], references: [id])
+  user          User             @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Analytics {
+  id           String   @id @default(cuid())
+  subdomain    String
+  path         String
+  method       String
+  statusCode   Int
+  responseTime Int
+  userIp       String   @map("user_ip")
+  userAgent    String?  @map("user_agent")
+  referer      String?
+  country      String?
+  city         String?
+  timestamp    DateTime @default(now())
+
+  @@index([subdomain])
+  @@index([timestamp])
+}
+
+enum DeploymentStatus {
+  NOT_STARTED
+  QUEUED
+  IN_PROGRESS
+  READY
+  FAIL
+}

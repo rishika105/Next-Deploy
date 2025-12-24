@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import Footer from "@/app/components/Footer";
+import Footer from "@/components/Footer";
 import {
   getDeploymentDetails,
   getDeploymentLogs,

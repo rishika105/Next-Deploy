@@ -5,15 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import Footer from "@/app/components/Footer.jsx";
+import Footer from "@/components/Footer.jsx";
 import {
   getProjectDetails,
   redeployProject,
   deleteProject,
   updateProjectSettings,
 } from "@/services/projectService";
-import CICDSettings from "@/app/components/CICDSettings";
-import BuildSettings from "@/app/components/BuildSettings";
+import CICDSettings from "@/components/CICDSettings";
+import BuildSettings from "@/components/BuildSettings";
 
 export default function ProjectSettingsPage() {
   const { id } = useParams();

@@ -11,6 +11,7 @@ import { clickhouseClient } from "./config/clickhouseClient.js";
 import dotenv from "dotenv";
 import gitRoutes from "./routes/gitRoutes.js";
 import webHookRoutes from "./routes/webhookRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 dotenv.config({ path: ".env", override: true });
 
 const app = express();
@@ -36,6 +37,7 @@ app.use("/api/logs", logRoutes());
 app.use("/api/deployment", deployRoutes());
 app.use("/api/github", gitRoutes());
 app.use("/api/webhook", webHookRoutes(ecsClient));
+app.use("/api/analytics", analyticsRoutes());
 
 // consume logs and store in clickhouse db
 async function initLogsConsumer() {

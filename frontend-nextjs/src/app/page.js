@@ -1,7 +1,7 @@
 "use client";
-import Cubes from "./components/Cubes.jsx";
-import Footer from "./components/Footer.jsx";
-import LiquidEther from "./components/LiquidEther.jsx";
+import Cubes from "../components/Cubes.jsx";
+import Footer from "../components/Footer.jsx";
+import LiquidEther from "../components/LiquidEther.jsx";
 import Link from "next/link.js";
 import { useState, useEffect } from "react";
 
