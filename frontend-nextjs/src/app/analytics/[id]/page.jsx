@@ -26,11 +26,12 @@ import {
   Eye,
   ArrowUp,
   ArrowDown,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
 import Footer from "@/components/Footer";
 
 const API_URL = "http://localhost:9000/api";
-const ANALYTICS_URL = "http://localhost:9000/api/analytics";
 
 const COLORS = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6"];
 
@@ -83,8 +84,13 @@ export default function AnalyticsPage() {
     if (!project) return;
 
     try {
+      const token = await getToken();
+      // ✅ Send auth token to protected endpoint
       const response = await axios.get(
-        `${ANALYTICS_URL}/${project.subDomain}?days=${selectedPeriod}`
+        `${API_URL}/analytics/${project.subDomain}?days=${selectedPeriod}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
       setAnalytics(response.data);
     } catch (error) {
@@ -98,8 +104,13 @@ export default function AnalyticsPage() {
     if (!project) return;
 
     try {
+      const token = await getToken();
+      // ✅ Send auth token to protected endpoint
       const response = await axios.get(
-        `${ANALYTICS_URL}/${project.subDomain}/realtime`
+        `${API_URL}/analytics/${project.subDomain}/realtime`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
       setRealtimeData(response.data);
     } catch (error) {
@@ -111,11 +122,6 @@ export default function AnalyticsPage() {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
-  };
-
-  const calculateGrowth = () => {
-    // Mock growth calculation - you'd compare with previous period
-    return Math.random() > 0.5 ? 15.3 : -8.2;
   };
 
   if (loading) {
@@ -142,7 +148,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  const growth = calculateGrowth();
+  const growth = analytics?.growth || 0;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -169,7 +175,7 @@ export default function AnalyticsPage() {
 
           <div className="flex items-center justify-between">
             <div>
-              <h1 className=" font-bold mb-2 text-white text-2xl bg-clip-text">
+              <h1 className="font-bold mb-2 text-white text-2xl">
                 Analytics Dashboard
               </h1>
               <p className="text-gray-400">
@@ -245,10 +251,6 @@ export default function AnalyticsPage() {
               <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
                 <Users className="w-6 h-6 text-blue-400" />
               </div>
-              <div className="flex items-center gap-1 text-sm text-green-400">
-                <ArrowUp className="w-4 h-4" />
-                12%
-              </div>
             </div>
             <h3 className="text-3xl font-bold mb-1">
               {formatNumber(analytics?.uniqueVisitors || 0)}
@@ -275,10 +277,6 @@ export default function AnalyticsPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center">
                 <Clock className="w-6 h-6 text-orange-400" />
-              </div>
-              <div className="flex items-center gap-1 text-sm text-green-400">
-                <ArrowDown className="w-4 h-4" />
-                5%
               </div>
             </div>
             <h3 className="text-3xl font-bold mb-1">
@@ -329,38 +327,44 @@ export default function AnalyticsPage() {
               <Globe className="w-5 h-5 text-[#FF9FFC]" />
               Top Countries
             </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={analytics?.topCountries || []}
-                  dataKey="visits"
-                  nameKey="country"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label={(entry) => `${entry.country}: ${entry.visits}`}
-                >
-                  {(analytics?.topCountries || []).map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1F2937",
-                    border: "1px solid #374151",
-                    borderRadius: "8px",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {(analytics?.topCountries || []).length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={analytics?.topCountries || []}
+                    dataKey="visits"
+                    nameKey="country"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    label={(entry) => `${entry.country}: ${entry.visits}`}
+                  >
+                    {(analytics?.topCountries || []).map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1F2937",
+                      border: "1px solid #374151",
+                      borderRadius: "8px",
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-gray-500">
+                No data available
+              </div>
+            )}
           </div>
         </div>
 
         {/* Tables */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Top Pages */}
           <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-6">
             <h3 className="text-lg font-semibold mb-4">Top Pages</h3>
@@ -430,6 +434,93 @@ export default function AnalyticsPage() {
               {(realtimeData?.recentRequests || []).length === 0 && (
                 <p className="text-gray-500 text-center py-8">
                   No recent visitors
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Security & Errors Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Error Pages (404, 500, etc.) */}
+          <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-red-400" />
+              Error Pages
+            </h3>
+            <div className="space-y-3">
+              {(analytics?.topErrors || []).map((error, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${
+                        error.statusCode >= 500
+                          ? "bg-red-500/20 text-red-400"
+                          : "bg-yellow-500/20 text-yellow-400"
+                      }`}
+                    >
+                      {error.statusCode}
+                    </span>
+                    <span className="text-white truncate font-mono text-sm">
+                      {error.path}
+                    </span>
+                  </div>
+                  <span className="text-red-400 font-semibold">
+                    {formatNumber(error.count)}
+                  </span>
+                </div>
+              ))}
+              {(analytics?.topErrors || []).length === 0 && (
+                <p className="text-gray-500 text-center py-8">
+                  No errors recorded 🎉
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Suspicious Activity */}
+          <div className="bg-gray-900/50 border border-red-900/50 rounded-xl p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-400" />
+              Suspicious Activity
+            </h3>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {(analytics?.suspiciousRequests || []).map((request, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-red-500/10 border border-red-500/30 rounded-lg"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white truncate font-mono text-sm mb-1">
+                      {request.path}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                      <span className="text-yellow-400">{request.ip}</span>
+                      <span>•</span>
+                      <span>{request.country}</span>
+                      <span>•</span>
+                      <span>
+                        {new Date(request.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      request.statusCode >= 400
+                        ? "bg-red-500/20 text-red-400"
+                        : "bg-yellow-500/20 text-yellow-400"
+                    }`}
+                  >
+                    {request.statusCode}
+                  </span>
+                </div>
+              ))}
+              {(analytics?.suspiciousRequests || []).length === 0 && (
+                <p className="text-gray-500 text-center py-8">
+                  No suspicious activity detected ✅
                 </p>
               )}
             </div>

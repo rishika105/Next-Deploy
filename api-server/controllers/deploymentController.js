@@ -9,6 +9,7 @@ const prisma = new PrismaClient();
 =========================== */
 export const getAllDeployments = asyncHandler(async (req, res) => {
   const id = req.auth.userId;
+  
 
   if (!id) {
     return res.status(404).json({

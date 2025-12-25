@@ -23,7 +23,7 @@ export default function Home() {
       icon: "🔧",
       title: "Zero Configuration",
       description:
-        "Just push your code. We handle the rest with automatic framework detection.",
+        "Connect with Github. Add Repositories. We handle the rest with automatic framework detection.",
     },
     {
       icon: "🌍",
@@ -33,9 +33,9 @@ export default function Home() {
     },
     {
       icon: "🔄",
-      title: "Instant Rollbacks",
+      title: "CI/CD for automated deployments",
       description:
-        "One-click rollbacks to any previous deployment. Safety first.",
+        "Enable CI/CD to automatically deploy on push.",
     },
     {
       icon: "🔒",
@@ -208,10 +208,10 @@ export default function Home() {
                   {[
                     "Git-based deployments",
                     "Automatic HTTPS/SSL",
-                    "Custom domains",
+                    "Custom subdomains",
                     "Environment variables",
-                    "Instant cache invalidation",
-                    "Real-time logs",
+                    "CI/CD for automation",
+                    "Real-time logs and analytics",
                   ].map((item, index) => (
                     <div key={index} className="flex items-center space-x-3">
                       <div className="w-2 h-2 bg-[#FF9FFC] rounded-full"></div>

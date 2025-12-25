@@ -33,7 +33,6 @@ export default function projectRoutes(ecsClient) {
    
   //delete
   router.delete("/:projectId", ClerkExpressRequireAuth(), deleteProject);
-
   
 
   return router;
