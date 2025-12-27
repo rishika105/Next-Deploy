@@ -1,6 +1,6 @@
 # 🚀 Next Deploy - Deploy Platform
 
-A full-stack deployment platform inspired by Vercel, allowing users to deploy static websites with one click directly from GitHub repositories.
+A full-stack scalable deployment platform inspired by Vercel, allowing users to deploy static websites with one click directly from GitHub repositories.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
@@ -42,7 +42,7 @@ A full-stack deployment platform inspired by Vercel, allowing users to deploy st
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **Next.js 16** - React framework
+- **Next.js** - React framework
 - **Tailwind CSS** - Styling
 - **Clerk** - Authentication
 - **Axios** - HTTP client
@@ -79,9 +79,8 @@ A full-stack deployment platform inspired by Vercel, allowing users to deploy st
 | Svelte | ✅ | `npm run build` | `build/` |
 | HTML/CSS/JS | ✅ | None | `./` |
 
-## 🚀 Getting Started
 
-### Prerequisites
+## Prerequisites
 
 - Node.js 22+
 - Docker & Docker Compose
